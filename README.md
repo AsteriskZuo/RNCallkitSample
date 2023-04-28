@@ -4,9 +4,9 @@ _English | [中文](./README.zh.md)_
 
 ## Example project introduction
 
-This project is a demo project of Uikit SDK.
+This project is a demo project of Callkit SDK.
 
-Mainly for the simplest demo of Uikit SDK. For more detailed usage examples, please see other example projects.
+Mainly for the simplest demo of Callkit SDK. For more detailed usage examples, please see other example projects.
 
 ## environment
 
@@ -16,7 +16,7 @@ Mainly for the simplest demo of Uikit SDK. For more detailed usage examples, ple
 ## create project
 
 ```sh
-npx react-native init RNUikitSample --template react-native-template-typescript
+npx react-native@latest init RNCallkitSample --template react-native-template-typescript
 ```
 
 ## Project initialization
@@ -29,12 +29,20 @@ yarn
 
 ### package.json
 
-Add Chat SDK and Uikit SDK
+Add Chat SDK and Callkit SDK
 
 ```sh
 yarn add react-native-chat-sdk
-yarn add react-native-chat-uikit
+yarn add react-native-chat-Callkit
+yarn add react-native-agora
 ```
+
+**Description** There are two ways to integrate `react-native-chat-callkit`:
+
+1. Integrate local dependencies `yarn add <local repo path>`
+2. Integrate npm package `yarn add react-native-chat-callkit`
+
+[react-native-chat-callkit repo](https://github.com/easemob/react-native-chat-library/packages/react-native-chat-callkit)
 
 Add page routing component
 
@@ -45,21 +53,16 @@ yarn add react-native-safe-area-context
 yarn add react-native-screens
 ```
 
-Add dependencies required by Uikit SDK
+Add dependencies required by Callkit SDK
 
 ```sh
-yarn add @react-native-clipboard/clipboard
+yarn add @react-native-camera-roll/camera-roll
+yarn add @react-native-community/blur
 yarn add @react-native-firebase/app
 yarn add @react-native-firebase/messaging
-yarn add @react-native-camera-roll/camera-roll
-yarn add @react-native-async-storage/async-storage
-yarn add react-native-audio-recorder-player
-yarn add react-native-create-thumbnail
-yarn add react-native-document-picker
-yarn add react-native-file-access
-yarn add react-native-image-picker
+yarn add react-native-device-info
 yarn add react-native-permissions
-yarn add react-native-video
+yarn add react-native-vector-icons
 yarn add react-native-get-random-values
 ```
 
@@ -131,45 +134,137 @@ buildscript {
 ```typescript
 export const RootParamsList: Record<string, object | undefined> = {
   Main: {},
-  Chat: {},
+  Call: {},
 };
-export let appKey = '1135220126133718#demo';
-export let defaultId = 'asterisk001';
-export let defaultPs = 'qwerty';
+export let appKey = '<your app key>';
+export let agoraAppId = '<your agora app key>';
+export let defaultId = '';
+export let defaultPs = '';
 export const autoLogin = false;
 export const debugModel = true;
-export const defaultTargetId = 'du006';
+export const defaultTargetId = ['<foo>', '<bar>'];
 
 try {
   appKey = require('./env').appKey;
   defaultId = require('./env').id;
   defaultPs = require('./env').ps;
+  agoraAppId = require('./env').agoraAppId;
 } catch (error) {
   console.error(error);
 }
 ```
 
-### Initialize Uikit SDK
+### Initialize Callkit SDK
 
 ```typescript
 const Root = createNativeStackNavigator();
 
 const App = () => {
   console.log('App:');
+  const [ready, setReady] = React.useState(false);
+
+  // AppServerClient.rtcTokenUrl = 'http://a41.easemob.com/token/rtc/channel';
+  // AppServerClient.mapUrl = 'http://a41.easemob.com/agora/channel/mapper';
+
+  if (ready === false) {
+    const init = () => {
+      ChatClient.getInstance()
+        .init(
+          new ChatOptions({appKey: appKey, autoLogin: false, debugModel: true}),
+        )
+        .then(() => {
+          setReady(true);
+        })
+        .catch(e => {
+          console.warn('test:error:', e);
+        });
+    };
+    init();
+  }
+
+  if (ready === false) {
+    return <ActivityIndicator />;
+  }
+
   return (
-    <UikitContainer
+    <CallkitContainer
       option={{
         appKey: appKey,
-        autoLogin: autoLogin,
-        debugModel: debugModel,
+        agoraAppId: agoraAppId,
+      }}
+      type="easemob"
+      requestRTCToken={(params: {
+        appKey: string;
+        channelId: string;
+        userId: string;
+        userChannelId?: number | undefined;
+        type?: 'easemob' | 'agora' | undefined;
+        onResult: (params: {data?: any; error?: any}) => void;
+      }) => {
+        console.log('requestRTCToken:', params);
+        AppServerClient.getRtcToken({
+          userAccount: params.userId,
+          channelId: params.channelId,
+          appKey,
+          userChannelId: params.userChannelId,
+          type: params.type,
+          onResult: (pp: {data?: any; error?: any}) => {
+            console.log('test:', pp);
+            params.onResult(pp);
+          },
+        });
+      }}
+      requestUserMap={(params: {
+        appKey: string;
+        channelId: string;
+        userId: string;
+        onResult: (params: {data?: any; error?: any}) => void;
+      }) => {
+        console.log('requestUserMap:', params);
+        AppServerClient.getRtcMap({
+          userAccount: params.userId,
+          channelId: params.channelId,
+          appKey,
+          onResult: (pp: {data?: any; error?: any}) => {
+            console.log('requestUserMap:getRtcMap:', pp);
+            params.onResult(pp);
+          },
+        });
+      }}
+      requestCurrentUser={(params: {
+        onResult: (params: {user: CallUser; error?: any}) => void;
+      }) => {
+        console.log('requestCurrentUser:', params);
+        ChatClient.getInstance()
+          .getCurrentUsername()
+          .then(result => {
+            params.onResult({
+              user: {
+                userId: result,
+                userNickName: result,
+              },
+            });
+          })
+          .catch(error => {
+            console.warn('test:getCurrentUsername:error:', error);
+          });
       }}>
       <NavigationContainer>
         <Root.Navigator initialRouteName="Main">
           <Root.Screen name="Main" component={MainScreen} />
-          <Root.Screen name="Chat" component={ChatScreen} />
+          <Root.Screen
+            options={() => {
+              return {
+                headerShown: false,
+                presentation: 'fullScreenModal',
+              };
+            }}
+            name="Call"
+            component={CallScreen}
+          />
         </Root.Navigator>
       </NavigationContainer>
-    </UikitContainer>
+    </CallkitContainer>
   );
 };
 
@@ -183,37 +278,113 @@ export function MainScreen({
   navigation,
 }: NativeStackScreenProps<typeof RootParamsList>): JSX.Element {
   console.log('test:', defaultId, defaultPs);
+  const {call} = useCallkitSdkContext();
   const placeholder1 = 'Please User Id';
   const placeholder2 = 'Please User Password or Token';
-  const placeholder3 = 'Please Chat Target Id';
+  const placeholder3 = 'Please Call Target Ids';
   const [id, setId] = React.useState(defaultId);
   const [token, setToken] = React.useState(defaultPs);
-  const [chatId, setChatId] = React.useState(defaultTargetId);
-  const {login: loginAction, logout: logoutAction} = useChatSdkContext();
+  const [ids, setIds] = React.useState(defaultTargetId);
+  const [logged, setLogged] = React.useState(false);
+  const type = 'easemob';
   const login = () => {
-    loginAction({
-      id,
-      pass: token,
-      type: 'easemob',
-      onResult: (result: {result: boolean; error?: any}) => {
-        console.log('logout:', result.result, result.error);
-      },
-    });
-  };
-  const logout = () => {
-    logoutAction({
-      onResult: (result: {result: boolean; error?: any}) => {
-        console.log('logout:', result.result, result.error);
-      },
-    });
-  };
-  const gotoChat = () => {
-    if (chatId.length > 0) {
-      navigation.push('Chat', {chatId: chatId, chatType: 0});
+    if (type === 'easemob') {
+      ChatClient.getInstance()
+        .login(id, token)
+        .then(() => {
+          console.log('test:login:success:');
+          setLogged(true);
+        })
+        .catch(e => {
+          console.log('test:error:', e);
+        });
+    } else {
+      ChatClient.getInstance()
+        .loginWithAgoraToken(id, token)
+        .then(() => {
+          console.log('test:login:success:');
+          setLogged(false);
+        })
+        .catch(e => {
+          console.log('test:error:', e);
+        });
     }
   };
+  const registry = () => {};
+  const logout = () => {
+    ChatClient.getInstance()
+      .logout()
+      .then(() => {
+        console.log('test:logout:success:');
+      })
+      .catch(e => {
+        console.log('test:error:', e);
+      });
+  };
+  const gotoCall = React.useCallback(
+    async (params: {
+      av: 'audio' | 'video';
+      sm: 'single' | 'multi';
+      isInviter: boolean;
+      inviterId?: string;
+    }) => {
+      if (logged === false) {
+        console.log('test:', 'Please log in first.');
+      }
+      if ((await requestAV()) === false) {
+        console.log('test:', 'Failed to request permission.');
+        return;
+      }
+      if (ids.length > 0) {
+        const {av, sm, isInviter, inviterId} = params;
+        if (isInviter === false) {
+          navigation.push('Call', {ids, av, sm, isInviter, inviterId});
+        } else {
+          navigation.push('Call', {ids, av, sm, isInviter});
+        }
+      }
+    },
+    [ids, logged, navigation],
+  );
+  const addListener = React.useCallback(() => {
+    const listener = {
+      onCallReceived: (params: {
+        channelId: string;
+        inviterId: string;
+        callType: CallType;
+        extension?: any;
+      }) => {
+        console.log('onCallReceived:', params);
+        const av =
+          params.callType === CallType.Video1v1 ||
+          params.callType === CallType.VideoMulti
+            ? 'video'
+            : 'audio';
+        const sm =
+          params.callType === CallType.AudioMulti ||
+          params.callType === CallType.VideoMulti
+            ? 'multi'
+            : 'single';
+        gotoCall({av, sm, isInviter: false, inviterId: params.inviterId});
+      },
+      onCallOccurError: (params: {channelId: string; error: CallError}) => {
+        console.warn('onCallOccurError:', params);
+      },
+    } as CallListener;
+    call.addListener(listener);
+    return () => {
+      call.removeListener(listener);
+    };
+  }, [call, gotoCall]);
+  React.useEffect(() => {
+    const ret = addListener();
+    return () => ret();
+  }, [addListener]);
   return (
-    <ScreenContainer mode="padding" edges={['right', 'left', 'bottom']}>
+    <SafeAreaView
+      style={styles.container}
+      mode="padding"
+      edges={['right', 'left', 'bottom']}>
       <View style={styles.container}>
         <View style={styles.inputContainer}>
           <TextInput
@@ -234,47 +405,86 @@ export function MainScreen({
           />
         </View>
         <View style={styles.buttonContainer}>
-          <Button style={styles.button} onPress={login}>
-            SIGN IN
-          </Button>
-          <Button style={styles.button} onPress={logout}>
-            SIGN OUT
-          </Button>
+          <Pressable style={styles.button} onPress={login}>
+            <Text style={styles.buttonText}>SIGN IN</Text>
+          </Pressable>
+          <Pressable style={styles.button} onPress={registry}>
+            <Text style={styles.buttonText}>SIGN UP</Text>
+          </Pressable>
+          <Pressable style={styles.button} onPress={logout}>
+            <Text style={styles.buttonText}>SIGN OUT</Text>
+          </Pressable>
         </View>
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
             placeholder={placeholder3}
-            value={chatId}
+            value={JSON.stringify(ids)}
             onChangeText={t => {
-              setChatId(t);
+              try {
+                const r = JSON.parse(t);
+                setIds(r as string[]);
+              } catch (error) {
+                console.log('test:error:', error);
+              }
             }}
           />
         </View>
         <View style={styles.buttonContainer}>
-          <Button style={styles.button} onPress={gotoChat}>
-            START CHAT
-          </Button>
+          <Pressable
+            style={styles.button}
+            onPress={() => {
+              gotoCall({av: 'audio', sm: 'single', isInviter: true});
+            }}>
+            <Text style={styles.buttonText}>Single Audio Call</Text>
+          </Pressable>
+          <Pressable
+            style={styles.button}
+            onPress={() => {
+              gotoCall({av: 'video', sm: 'single', isInviter: true});
+            }}>
+            <Text style={styles.buttonText}>Single Video Call</Text>
+          </Pressable>
+          <Pressable
+            style={styles.button}
+            onPress={() => {
+              gotoCall({av: 'video', sm: 'multi', isInviter: true});
+            }}>
+            <Text style={styles.buttonText}>Multi Call</Text>
+          </Pressable>
         </View>
       </View>
-    </ScreenContainer>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: 'white',
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
+    flexWrap: 'wrap',
   },
   button: {
     height: 40,
     marginHorizontal: 10,
+    backgroundColor: 'blue',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 10,
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: '500',
   },
   inputContainer: {
     marginHorizontal: 20,
+    // backgroundColor: 'red',
   },
   input: {
     height: 40,
@@ -286,240 +496,252 @@ const styles = StyleSheet.create({
 });
 ```
 
-### Integrated chat page
+### Request permissions
 
 ```typescript
-export function ChatScreen({
-  route,
-}: NativeStackScreenProps<typeof RootParamsList>): JSX.Element {
-  console.log('test:', route.params);
-  const chatRef = React.useRef<ChatFragmentRef>({} as any);
-  const chatId = React.useRef((route.params as any).chatId ?? '').current;
-  // const chatType = (route.params as any).chatType ?? 0;
-  const [showSheet, setShowSheet] = React.useState(false);
+import {request} from 'react-native-permissions';
 
-  const onPressInInputVoiceButton = () => {
-    Services.ms
-      .startRecordAudio({
-        audio: {
-          AudioEncoderAndroid: AudioEncoderAndroidType.AAC,
-          AudioSourceAndroid: AudioSourceAndroidType.MIC,
-          AVModeIOS: AVModeIOSOption.measurement,
-          AVEncoderAudioQualityKeyIOS: AVEncoderAudioQualityIOSType.high,
-          AVNumberOfChannelsKeyIOS: 2,
-          AVFormatIDKeyIOS: AVEncodingOption.aac,
-        } as AudioSet,
-        onPosition: pos => {
-          console.log('test:startRecordAudio:pos:', pos);
-        },
-        onFailed: error => {
-          console.warn('test:startRecordAudio:onFailed:', error);
-        },
-        onFinished: ({result, path, error}) => {
-          console.log('test:startRecordAudio:onFinished:', result, path, error);
-        },
-      })
-      .then(result => {
-        console.log('test:startRecordAudio:result:', result);
-      })
-      .catch(error => {
-        console.warn('test:startRecordAudio:error:', error);
-      });
-  };
-  const onPressOutInputVoiceButton = () => {
-    console.log('test:onPressOutInputVoiceButton:', Services.dcs);
-    let localPath = Services.dcs.getFileDir(chatId, uuid());
-    Services.ms
-      .stopRecordAudio()
-      .then((result?: {pos: number; path: string}) => {
-        if (result?.path) {
-          const extension = getFileExtension(result.path);
-          localPath = localPath + extension;
-          Services.ms
-            .saveFromLocal({
-              targetPath: localPath,
-              localPath: result.path,
-            })
-            .then(() => {
-              onVoiceRecordEnd?.({
-                localPath,
-                duration: result.pos / 1000,
-              });
-            })
-            .catch(error => {
-              console.warn('test:startRecordAudio:save:error', error);
-            });
-        }
-      })
-      .catch(error => {
-        console.warn('test:stopRecordAudio:error:', error);
-      });
-  };
-  const onVoiceRecordEnd = (params: {localPath: string; duration: number}) => {
-    chatRef.current.sendVoiceMessage(params);
-  };
-
-  const More = () => {
-    if (showSheet === false) {
-      return null;
-    }
-
-    const handlers1 = {
-      onStartShouldSetResponder: (_: GestureResponderEvent): boolean => {
+export async function requestAV(): Promise<boolean> {
+  try {
+    if (Platform.OS === 'ios') {
+      const mic = await request('ios.permission.MICROPHONE');
+      const cam = await request('ios.permission.CAMERA');
+      const blu = await request('ios.permission.BLUETOOTH_PERIPHERAL');
+      if (mic === 'granted' && cam === 'granted') {
         return true;
-      },
-      onStartShouldSetResponderCapture: (_: GestureResponderEvent): boolean => {
-        return false;
-      },
-      onResponderGrant: (_: GestureResponderEvent) => {},
-      onResponderRelease: (_: GestureResponderEvent) => {
-        console.log('test:onResponderRelease:1:');
-        setShowSheet(false);
-      },
-    } as GestureResponderHandlers;
-    const handlers2 = {
-      onStartShouldSetResponder: (_: GestureResponderEvent): boolean => {
-        return true;
-      },
-      onStartShouldSetResponderCapture: (_: GestureResponderEvent): boolean => {
-        return false;
-      },
-      onResponderGrant: (_: GestureResponderEvent) => {},
-      onResponderRelease: (_: GestureResponderEvent) => {
-        console.log('test:onResponderRelease:2:');
-      },
-    } as GestureResponderHandlers;
-
-    const onCamera = () => {
-      setShowSheet(false);
-      Services.ms
-        .openCamera({})
-        .then(result => {
-          console.log('openCamera:', Platform.OS, result);
-          chatRef.current?.sendImageMessage([
-            {
-              name: result?.name ?? '',
-              localPath: result?.uri ?? '',
-              fileSize: result?.size ?? 0,
-              imageType: result?.type ?? '',
-              width: result?.width ?? 0,
-              height: result?.height ?? 0,
-              onResult: r => {
-                console.log('openCamera:result:', r);
-              },
-            },
-          ]);
-        })
-        .catch(error => {
-          console.warn('error:', error);
-        });
-    };
-    const onAlbum = () => {
-      setShowSheet(false);
-      Services.ms
-        .openMediaLibrary({selectionLimit: 1})
-        .then(result => {
-          console.log('openMediaLibrary:', Platform.OS, result);
-          chatRef.current?.sendImageMessage(
-            result.map(value => {
-              return {
-                name: value?.name ?? '',
-                localPath: value?.uri ?? '',
-                fileSize: value?.size ?? 0,
-                imageType: value?.type ?? '',
-                width: value?.width ?? 0,
-                height: value?.height ?? 0,
-                onResult: r => {
-                  console.log('openMediaLibrary:result:', r);
-                },
-              };
-            }),
-          );
-        })
-        .catch(error => {
-          console.warn('error:', error);
-        });
-    };
-    const onFiles = async () => {
-      setShowSheet(false);
-      const ret = await Services.ps.hasMediaLibraryPermission();
-      if (ret === false) {
-        await Services.ps.requestMediaLibraryPermission();
       }
-      Services.ms
-        .openDocument({})
-        .then(result => {
-          console.log('openDocument:', Platform.OS, result);
-          chatRef.current?.sendFileMessage({
-            localPath: result?.uri ?? '',
-            fileSize: result?.size ?? 0,
-            displayName: result?.name,
-            onResult: r => {
-              console.log('openDocument:result', r);
+      console.log('test:', mic, cam, blu);
+    } else if (Platform.OS === 'android') {
+      const mic = await request('android.permission.CAMERA');
+      const cam = await request('android.permission.RECORD_AUDIO');
+      const blu = await request('android.permission.BLUETOOTH_CONNECT');
+      if (mic === 'granted' && cam === 'granted' && blu === 'granted') {
+        return true;
+      }
+      console.log('test:', mic, cam, blu);
+    }
+    return false;
+  } catch (error) {
+    console.log('test:', error);
+    return false;
+  }
+}
+```
+
+### Get token and users map
+
+```typescript
+export class AppServerClient {
+  private static _rtcTokenUrl: string =
+    'http://a1.easemob.com/token/rtcToken/v1';
+  private static _mapUrl: string = 'http://a1.easemob.com/channel/mapper';
+
+  protected _(): void {}
+  private static async req(params: {
+    method: 'GET' | 'POST';
+    url: string;
+    kvs: any;
+    from: 'requestToken' | 'requestUserMap';
+    onResult: (p: {data?: any; error?: any}) => void;
+  }): Promise<void> {
+    // console.log('AppServerClient:req:', params);
+    try {
+      const accessToken = await ChatClient.getInstance().getAccessToken();
+      // console.log('AppServerClient:req:', accessToken);
+      const json = params.kvs as {
+        userAccount: string;
+        channelName: string;
+        appkey: string;
+      };
+      const url = `${params.url}?appkey=${encodeURIComponent(
+        json.appkey,
+      )}&channelName=${encodeURIComponent(
+        json.channelName,
+      )}&userAccount=${encodeURIComponent(json.userAccount)}`;
+      // console.log('AppServerClient:req:', url);
+      const response = await fetch(url, {
+        method: params.method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const value = await response.json();
+      // console.log('AppServerClient:req:', value);
+      if (value.code !== 'RES_0K') {
+        params.onResult({error: {code: value.code}});
+      } else {
+        if (params.from === 'requestToken') {
+          params.onResult({
+            data: {
+              token: value.accessToken,
+              uid: value.agoraUserId,
             },
           });
-        })
-        .catch(error => {
-          console.warn('error:', error);
-        });
+        } else if (params.from === 'requestUserMap') {
+          params.onResult({
+            data: {
+              result: value.result,
+            },
+          });
+        }
+      }
+    } catch (error) {
+      params.onResult({error});
+    }
+  }
+  public static getRtcToken(params: {
+    userAccount: string;
+    channelId: string;
+    appKey: string;
+    userChannelId?: number | undefined;
+    type?: 'easemob' | 'agora' | undefined;
+    onResult: (params: {data?: any; error?: any}) => void;
+  }): void {
+    const tokenUrl = (url: string) => {
+      let ret = url;
+      if (params.type !== 'easemob') {
+        ret += `/${params.channelId}/agorauid/${params.userChannelId!}`;
+      }
+      return ret;
     };
 
-    return (
-      <View style={[styles.moreContainer]} {...handlers1}>
-        <View style={styles.contentContainer} {...handlers2}>
-          <Button style={styles.button} onPress={onCamera}>
-            Camera
-          </Button>
-          <Button style={styles.button} onPress={onAlbum}>
-            Album
-          </Button>
-          <Button style={styles.button} onPress={onFiles as any}>
-            Files
-          </Button>
-        </View>
-      </View>
-    );
-  };
+    AppServerClient.req({
+      method: 'GET',
+      url: tokenUrl(AppServerClient._rtcTokenUrl),
+      kvs: {
+        userAccount: params.userAccount,
+        channelName: params.channelId,
+        appkey: params.appKey,
+      },
+      from: 'requestToken',
+      onResult: params.onResult,
+    });
+  }
+  public static getRtcMap(params: {
+    userAccount: string;
+    channelId: string;
+    appKey: string;
+    onResult: (params: {data?: any; error?: any}) => void;
+  }): void {
+    AppServerClient.req({
+      method: 'GET',
+      url: AppServerClient._mapUrl,
+      kvs: {
+        userAccount: params.userAccount,
+        channelName: params.channelId,
+        appkey: params.appKey,
+      },
+      from: 'requestUserMap',
+      onResult: params.onResult,
+    });
+  }
 
-  const ChatFragmentMemo = React.memo(ChatFragment);
-  return (
-    <ScreenContainer mode="padding" edges={['right', 'left', 'bottom']}>
-      <ChatFragmentMemo
-        propsRef={chatRef}
-        screenParams={{
-          params: route.params as any,
-        }}
-        onPressInInputVoiceButton={onPressInInputVoiceButton}
-        onPressOutInputVoiceButton={onPressOutInputVoiceButton}
-        onVoiceRecordEnd={onVoiceRecordEnd}
-        onClickInputMoreButton={() => {
-          setShowSheet(true);
-        }}
-      />
-      <More />
-    </ScreenContainer>
-  );
+  public static set rtcTokenUrl(url: string) {
+    AppServerClient._rtcTokenUrl = url;
+  }
+  public static set mapUrl(url: string) {
+    AppServerClient._mapUrl = url;
+  }
 }
+```
 
-const styles = StyleSheet.create({
-  moreContainer: {
-    flex: 1,
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  contentContainer: {
-    height: 200,
-  },
-  button: {
-    height: 40,
-    marginHorizontal: 20,
-    marginVertical: 10,
-    borderRadius: 20,
-  },
-});
+### Integrated audio and video call
+
+```typescript
+export function CallScreen({
+  route,
+  navigation,
+}: NativeStackScreenProps<typeof RootParamsList>): JSX.Element {
+  console.log('test:', route.params);
+  const av = (route.params as any).av as 'audio' | 'video';
+  const sm = (route.params as any).sm as 'single' | 'multi';
+  const ids = (route.params as any).ids as string[];
+  const currentId = React.useRef('');
+  const inviterId = React.useRef((route.params as any).inviterId ?? '');
+  const callType = React.useRef(av).current;
+  const isInviter = React.useRef((route.params as any).isInviter as boolean);
+  const inviteeId = React.useRef(ids[0] ?? '');
+  const inviteeIds = React.useRef(ids);
+  const [ready, setReady] = React.useState(false);
+
+  React.useEffect(() => {
+    const init = () => {
+      ChatClient.getInstance()
+        .getCurrentUsername()
+        .then(value => {
+          currentId.current = value;
+          isInviter.current = true;
+          if (isInviter.current === true) {
+            inviterId.current = currentId.current;
+          }
+          setReady(true);
+        })
+        .catch(e => {
+          console.log('test:error:', e);
+        });
+    };
+    init();
+  }, []);
+
+  if (ready === false) {
+    return <ActivityIndicator />;
+  }
+
+  console.log(
+    'test:2:',
+    inviteeId.current,
+    currentId.current,
+    isInviter.current,
+    callType,
+  );
+
+  if (sm === 'single') {
+    return (
+      <SingleCall
+        inviterId={inviteeId.current}
+        currentId={currentId.current}
+        currentName={currentId.current}
+        callType={callType}
+        isInviter={isInviter.current}
+        onClose={(
+          elapsed: number,
+          reason?: CallEndReason | undefined,
+        ): void => {
+          console.log('test:', elapsed, reason);
+          navigation.goBack();
+        }}
+        onError={(error: CallError) => {
+          console.log('test:', error);
+          navigation.goBack();
+        }}
+        inviteeId={inviteeId.current}
+      />
+    );
+  } else {
+    return (
+      <MultiCall
+        inviterId={inviteeId.current}
+        currentId={currentId.current}
+        currentName={currentId.current}
+        callType={callType}
+        isInviter={isInviter.current}
+        onClose={(
+          elapsed: number,
+          reason?: CallEndReason | undefined,
+        ): void => {
+          console.log('test:', elapsed, reason);
+          navigation.goBack();
+        }}
+        onError={(error: CallError) => {
+          console.log('test:', error);
+          navigation.goBack();
+        }}
+        inviteeIds={inviteeIds.current}
+      />
+    );
+  }
+}
 ```
 
 Complete example [Reference](./App.tsx)
