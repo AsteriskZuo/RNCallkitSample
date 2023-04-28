@@ -2,8 +2,12 @@ import {ChatClient} from 'react-native-chat-sdk';
 
 export class AppServerClient {
   private static _rtcTokenUrl: string =
-    'http://a1.easemob.com/token/rtcToken/v1';
-  private static _mapUrl: string = 'http://a1.easemob.com/channel/mapper';
+    'https://a1.easemob.com/token/rtcToken/v1';
+  private static _mapUrl: string = 'https://a1.easemob.com/channel/mapper';
+  private static _regUrl: string =
+    'https://a41.easemob.com/app/chat/user/register';
+  private static _tokenUrl: string =
+    'https://a41.easemob.com/app/chat/user/login';
 
   protected _(): void {}
   private static async req(params: {
@@ -16,7 +20,7 @@ export class AppServerClient {
     // console.log('AppServerClient:req:', params);
     try {
       const accessToken = await ChatClient.getInstance().getAccessToken();
-      // console.log('AppServerClient:req:', accessToken);
+      console.log('AppServerClient:req:', accessToken);
       const json = params.kvs as {
         userAccount: string;
         channelName: string;
@@ -27,19 +31,18 @@ export class AppServerClient {
       )}&channelName=${encodeURIComponent(
         json.channelName,
       )}&userAccount=${encodeURIComponent(json.userAccount)}`;
-      // console.log('AppServerClient:req:', url);
+      console.log('AppServerClient:req:', url);
       const response = await fetch(url, {
         method: params.method,
         headers: {
+          Accept: 'application/json',
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
       });
       const value = await response.json();
-      // console.log('AppServerClient:req:', value);
-      if (value.code !== 'RES_0K') {
-        params.onResult({error: {code: value.code}});
-      } else {
+      console.log('AppServerClient:req:', value, value.code);
+      if (value.code === 'RES_0K' || value.code === 'RES_OK') {
         if (params.from === 'requestToken') {
           params.onResult({
             data: {
@@ -54,6 +57,8 @@ export class AppServerClient {
             },
           });
         }
+      } else {
+        params.onResult({error: {code: value.code}});
       }
     } catch (error) {
       params.onResult({error});
@@ -68,6 +73,7 @@ export class AppServerClient {
     onResult: (params: {data?: any; error?: any}) => void;
   }): void {
     const tokenUrl = (url: string) => {
+      console.log('test:tokenUrl', params.type, url);
       let ret = url;
       if (params.type !== 'easemob') {
         ret += `/${params.channelId}/agorauid/${params.userChannelId!}`;
@@ -106,10 +112,84 @@ export class AppServerClient {
     });
   }
 
+  public static registerAccount(params: {
+    userId: string;
+    userPassword: string;
+    onResult: (params: {data?: any; error?: any}) => void;
+  }): void {
+    fetch(AppServerClient._regUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userAccount: params.userId,
+        userPassword: params.userPassword,
+      }),
+    })
+      .then(async response => {
+        try {
+          const value = await response.json();
+          console.log('test:value:', value, value.code);
+          if (value.code === 'RES_0K' || value.code === 'RES_OK') {
+            params.onResult({data: {}});
+          } else {
+            params.onResult({error: {code: value.code}});
+          }
+        } catch (e) {
+          params.onResult({error: e});
+        }
+      })
+      .catch(e => {
+        console.log('getAccountToken:error:', AppServerClient._regUrl, e);
+        params.onResult({error: e});
+      });
+  }
+
+  public static getAccountToken(params: {
+    userId: string;
+    userPassword: string;
+    onResult: (params: {data?: any; error?: any}) => void;
+  }): void {
+    fetch(AppServerClient._tokenUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userAccount: params.userId,
+        userPassword: params.userPassword,
+      }),
+    })
+      .then(async response => {
+        try {
+          const value = await response.json();
+          console.log('test:value:', value, value.code);
+          if (value.code === 'RES_0K' || value.code === 'RES_OK') {
+            params.onResult({data: {token: value.accessToken}});
+          } else {
+            params.onResult({error: {code: value.code}});
+          }
+        } catch (e) {
+          params.onResult({error: e});
+        }
+      })
+      .catch(e => {
+        console.log('getAccountToken:error:', AppServerClient._tokenUrl, e);
+        params.onResult({error: e});
+      });
+  }
+
   public static set rtcTokenUrl(url: string) {
     AppServerClient._rtcTokenUrl = url;
   }
   public static set mapUrl(url: string) {
     AppServerClient._mapUrl = url;
+  }
+  public static set regUrl(url: string) {
+    AppServerClient._regUrl = url;
+  }
+  public static set tokenUrl(url: string) {
+    AppServerClient._tokenUrl = url;
   }
 }

@@ -3,6 +3,7 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {
   RootParamsList,
+  accountType,
   defaultId,
   defaultPs,
   defaultTargetId,
@@ -17,6 +18,7 @@ import {
   useCallkitSdkContext,
 } from 'react-native-chat-callkit';
 import {requestAV} from './AppPermission';
+import {AppServerClient} from './AppServer';
 
 export function MainScreen({
   navigation,
@@ -30,9 +32,31 @@ export function MainScreen({
   const [token, setToken] = React.useState(defaultPs);
   const [ids, setIds] = React.useState(defaultTargetId);
   const [logged, setLogged] = React.useState(false);
-  const type = 'easemob';
+  const type = accountType;
   const login = () => {
-    if (type === 'easemob') {
+    console.log('test:login:', id, token, type);
+    if (type !== 'easemob') {
+      AppServerClient.getAccountToken({
+        userId: id,
+        userPassword: token,
+        onResult: (params: {data?: any; error?: any}) => {
+          console.log('test:', id, token, params);
+          if (params.error === undefined) {
+            ChatClient.getInstance()
+              .loginWithAgoraToken(id, params.data.token)
+              .then(() => {
+                console.log('test:loginWithAgoraToken:success:');
+                setLogged(false);
+              })
+              .catch(e => {
+                console.log('test:error:', e);
+              });
+          } else {
+            console.log('test:error:', params.error);
+          }
+        },
+      });
+    } else {
       ChatClient.getInstance()
         .login(id, token)
         .then(() => {
@@ -42,19 +66,17 @@ export function MainScreen({
         .catch(e => {
           console.log('test:error:', e);
         });
-    } else {
-      ChatClient.getInstance()
-        .loginWithAgoraToken(id, token)
-        .then(() => {
-          console.log('test:login:success:');
-          setLogged(false);
-        })
-        .catch(e => {
-          console.log('test:error:', e);
-        });
     }
   };
-  const registry = () => {};
+  const registry = () => {
+    AppServerClient.registerAccount({
+      userId: id,
+      userPassword: token,
+      onResult: (params: {data?: any; error?: any}) => {
+        console.log('test:', id, token, params);
+      },
+    });
+  };
   const logout = () => {
     ChatClient.getInstance()
       .logout()

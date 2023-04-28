@@ -15,7 +15,7 @@ export async function requestAV(): Promise<boolean> {
       const mic = await request('android.permission.CAMERA');
       const cam = await request('android.permission.RECORD_AUDIO');
       const blu = await request('android.permission.BLUETOOTH_CONNECT');
-      if (mic === 'granted' && cam === 'granted' && blu === 'granted') {
+      if (mic === 'granted' && cam === 'granted') {
         return true;
       }
       console.log('test:', mic, cam, blu);

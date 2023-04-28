@@ -750,4 +750,9 @@ export function CallScreen({
 
 执行 React-Native 运行命令 `yarn run ios` 或者 `yarn run android`，开始体验吧。
 
+
+## 更加详细的示例
+
+[参考](https://github.com/easemob/react-native-chat-library/tree/dev/examples/callkit-example)
+
 ## Q & A

@@ -13,5 +13,6 @@ export const appKey = '';
 export const id = '';
 export const ps = '';
 export const agoraAppId = '';
+export const accountType = 'easemob'; // agora or easemob
 `;
 fs.writeFileSync(file, content, 'utf-8');

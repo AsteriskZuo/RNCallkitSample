@@ -13,7 +13,7 @@ import {
   GlobalContainer as CallkitContainer,
 } from 'react-native-chat-callkit';
 
-import {agoraAppId, appKey} from './AppConfig';
+import {accountType, agoraAppId, appKey} from './AppConfig';
 import {MainScreen} from './Main';
 import {CallScreen} from './Call';
 import {AppServerClient} from './AppServer';
@@ -26,8 +26,10 @@ const App = () => {
   console.log('App:');
   const [ready, setReady] = React.useState(false);
 
-  // AppServerClient.rtcTokenUrl = 'http://a41.easemob.com/token/rtc/channel';
-  // AppServerClient.mapUrl = 'http://a41.easemob.com/agora/channel/mapper';
+  if (accountType !== 'easemob') {
+    AppServerClient.rtcTokenUrl = 'https://a41.easemob.com/token/rtc/channel';
+    AppServerClient.mapUrl = 'https://a41.easemob.com/agora/channel/mapper';
+  }
 
   if (ready === false) {
     const init = () => {
@@ -55,7 +57,7 @@ const App = () => {
         appKey: appKey,
         agoraAppId: agoraAppId,
       }}
-      type="easemob"
+      type={accountType}
       requestRTCToken={(params: {
         appKey: string;
         channelId: string;
@@ -72,7 +74,7 @@ const App = () => {
           userChannelId: params.userChannelId,
           type: params.type,
           onResult: (pp: {data?: any; error?: any}) => {
-            console.log('test:', pp);
+            console.log('requestRTCToken:onResult:', pp);
             params.onResult(pp);
           },
         });
@@ -89,7 +91,7 @@ const App = () => {
           channelId: params.channelId,
           appKey,
           onResult: (pp: {data?: any; error?: any}) => {
-            console.log('requestUserMap:getRtcMap:', pp);
+            console.log('requestUserMap:onResult:', pp);
             params.onResult(pp);
           },
         });
@@ -109,7 +111,7 @@ const App = () => {
             });
           })
           .catch(error => {
-            console.warn('test:getCurrentUsername:error:', error);
+            console.warn('requestCurrentUser:getCurrentUsername:error:', error);
           });
       }}>
       <NavigationContainer>

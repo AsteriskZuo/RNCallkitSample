@@ -750,4 +750,8 @@ Complete example [Reference](./App.tsx)
 
 Execute the React-Native run command `yarn run ios` or `yarn run android`, and start to experience it.
 
+## more detailed example
+
+[see](https://github.com/easemob/react-native-chat-library/tree/dev/examples/callkit-example)
+
 ## Q & A
