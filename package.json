@@ -7,11 +7,27 @@
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
-    "test": "jest"
+    "test": "jest",
+    "env": "node generate-env.js"
   },
   "dependencies": {
+    "@react-native-camera-roll/camera-roll": "^5.2.0",
+    "@react-native-community/blur": "^4.3.0",
+    "@react-native-firebase/app": "^16.5.0",
+    "@react-native-firebase/messaging": "^16.5.0",
+    "@react-navigation/native": "^6.1.6",
+    "@react-navigation/native-stack": "^6.9.12",
     "react": "18.2.0",
-    "react-native": "0.71.7"
+    "react-native": "0.71.7",
+    "react-native-agora": "^4.1.2",
+    "react-native-chat-callkit": "../react-native-chat-library/packages/react-native-chat-callkit",
+    "react-native-chat-sdk": "1.1.2-beta.3",
+    "react-native-device-info": "^10.4.0",
+    "react-native-get-random-values": "^1.8.0",
+    "react-native-safe-area-context": "^4.4.0",
+    "react-native-screens": "^3.18.0",
+    "react-native-vector-icons": "^9.2.0",
+    "react-native-permissions": "^3.6.1"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

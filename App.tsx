@@ -5,114 +5,130 @@
  * @format
  */
 
+import {NavigationContainer} from '@react-navigation/native';
+import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import React from 'react';
-import type {PropsWithChildren} from 'react';
 import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+  CallUser,
+  GlobalContainer as CallkitContainer,
+} from 'react-native-chat-callkit';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+import {agoraAppId, appKey} from './AppConfig';
+import {MainScreen} from './Main';
+import {CallScreen} from './Call';
+import {AppServerClient} from './AppServer';
+import {ChatClient, ChatOptions} from 'react-native-chat-sdk';
+import {ActivityIndicator} from 'react-native';
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+const Root = createNativeStackNavigator();
 
-function Section({children, title}: SectionProps): JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+const App = () => {
+  console.log('App:');
+  const [ready, setReady] = React.useState(false);
 
-function App(): JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+  // AppServerClient.rtcTokenUrl = 'http://a41.easemob.com/token/rtc/channel';
+  // AppServerClient.mapUrl = 'http://a41.easemob.com/agora/channel/mapper';
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-  };
+  if (ready === false) {
+    const init = () => {
+      ChatClient.getInstance()
+        .init(
+          new ChatOptions({appKey: appKey, autoLogin: false, debugModel: true}),
+        )
+        .then(() => {
+          setReady(true);
+        })
+        .catch(e => {
+          console.warn('test:error:', e);
+        });
+    };
+    init();
+  }
+
+  if (ready === false) {
+    return <ActivityIndicator />;
+  }
 
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <CallkitContainer
+      option={{
+        appKey: appKey,
+        agoraAppId: agoraAppId,
+      }}
+      type="easemob"
+      requestRTCToken={(params: {
+        appKey: string;
+        channelId: string;
+        userId: string;
+        userChannelId?: number | undefined;
+        type?: 'easemob' | 'agora' | undefined;
+        onResult: (params: {data?: any; error?: any}) => void;
+      }) => {
+        console.log('requestRTCToken:', params);
+        AppServerClient.getRtcToken({
+          userAccount: params.userId,
+          channelId: params.channelId,
+          appKey,
+          userChannelId: params.userChannelId,
+          type: params.type,
+          onResult: (pp: {data?: any; error?: any}) => {
+            console.log('test:', pp);
+            params.onResult(pp);
+          },
+        });
+      }}
+      requestUserMap={(params: {
+        appKey: string;
+        channelId: string;
+        userId: string;
+        onResult: (params: {data?: any; error?: any}) => void;
+      }) => {
+        console.log('requestUserMap:', params);
+        AppServerClient.getRtcMap({
+          userAccount: params.userId,
+          channelId: params.channelId,
+          appKey,
+          onResult: (pp: {data?: any; error?: any}) => {
+            console.log('requestUserMap:getRtcMap:', pp);
+            params.onResult(pp);
+          },
+        });
+      }}
+      requestCurrentUser={(params: {
+        onResult: (params: {user: CallUser; error?: any}) => void;
+      }) => {
+        console.log('requestCurrentUser:', params);
+        ChatClient.getInstance()
+          .getCurrentUsername()
+          .then(result => {
+            params.onResult({
+              user: {
+                userId: result,
+                userNickName: result,
+              },
+            });
+          })
+          .catch(error => {
+            console.warn('test:getCurrentUsername:error:', error);
+          });
+      }}>
+      <NavigationContainer>
+        <Root.Navigator initialRouteName="Main">
+          <Root.Screen name="Main" component={MainScreen} />
+          <Root.Screen
+            options={() => {
+              return {
+                headerShown: false,
+                presentation: 'fullScreenModal',
+              };
+            }}
+            name="Call"
+            component={CallScreen}
+          />
+        </Root.Navigator>
+      </NavigationContainer>
+    </CallkitContainer>
   );
-}
-
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
+};
 
 export default App;
