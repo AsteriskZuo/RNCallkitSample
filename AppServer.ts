@@ -161,33 +161,6 @@ export class AppServerClient {
     onResult: (params: {data?: any; error?: any}) => void;
   }): void {
     this.req2({...params, from: 'registerAccount'});
-    // fetch(AppServerClient._regUrl, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify({
-    //     userAccount: params.userId,
-    //     userPassword: params.userPassword,
-    //   }),
-    // })
-    //   .then(async response => {
-    //     try {
-    //       const value = await response.json();
-    //       dlog.log('test:value:', value, value.code);
-    //       if (value.code === 'RES_0K' || value.code === 'RES_OK') {
-    //         params.onResult({data: {}});
-    //       } else {
-    //         params.onResult({error: {code: value.code}});
-    //       }
-    //     } catch (e) {
-    //       params.onResult({error: e});
-    //     }
-    //   })
-    //   .catch(e => {
-    //     dlog.log('getAccountToken:error:', AppServerClient._regUrl, e);
-    //     params.onResult({error: e});
-    //   });
   }
 
   public static getAccountToken(params: {
@@ -196,33 +169,6 @@ export class AppServerClient {
     onResult: (params: {data?: any; error?: any}) => void;
   }): void {
     this.req2({...params, from: 'getAccountToken'});
-    // fetch(AppServerClient._tokenUrl, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify({
-    //     userAccount: params.userId,
-    //     userPassword: params.userPassword,
-    //   }),
-    // })
-    //   .then(async response => {
-    //     try {
-    //       const value = await response.json();
-    //       dlog.log('test:value:', value, value.code);
-    //       if (value.code === 'RES_0K' || value.code === 'RES_OK') {
-    //         params.onResult({data: {token: value.accessToken}});
-    //       } else {
-    //         params.onResult({error: {code: value.code}});
-    //       }
-    //     } catch (e) {
-    //       params.onResult({error: e});
-    //     }
-    //   })
-    //   .catch(e => {
-    //     dlog.log('getAccountToken:error:', AppServerClient._tokenUrl, e);
-    //     params.onResult({error: e});
-    //   });
   }
 
   public static set rtcTokenUrl(url: string) {

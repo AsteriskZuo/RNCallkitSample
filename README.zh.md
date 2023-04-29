@@ -136,19 +136,22 @@ export const RootParamsList: Record<string, object | undefined> = {
   Main: {},
   Call: {},
 };
-export let appKey = '<your app key>';
-export let agoraAppId = '<your agora app key>';
-export let defaultId = '';
-export let defaultPs = '';
+export let appKey = '1135220126133718#demo';
+export let agoraAppId = '';
+export let defaultId = 'asterisk001';
+export let defaultPs = 'qwerty';
+export let accountType: 'agora' | 'easemob' | undefined;
 export const autoLogin = false;
 export const debugModel = true;
-export const defaultTargetId = ['<foo>', '<bar>'];
+export let defaultTargetId = ['asterisk025'];
 
 try {
   appKey = require('./env').appKey;
   defaultId = require('./env').id;
   defaultPs = require('./env').ps;
   agoraAppId = require('./env').agoraAppId;
+  accountType = require('./env').accountType;
+  defaultTargetId = [require('./env').targetId as string];
 } catch (error) {
   console.error(error);
 }
@@ -160,11 +163,14 @@ try {
 const Root = createNativeStackNavigator();
 
 const App = () => {
-  console.log('App:');
+  dlog.log('App:');
   const [ready, setReady] = React.useState(false);
+  const enableLog = true;
 
-  // AppServerClient.rtcTokenUrl = 'http://a41.easemob.com/token/rtc/channel';
-  // AppServerClient.mapUrl = 'http://a41.easemob.com/agora/channel/mapper';
+  if (accountType !== 'easemob') {
+    AppServerClient.rtcTokenUrl = 'https://a41.easemob.com/token/rtc/channel';
+    AppServerClient.mapUrl = 'https://a41.easemob.com/agora/channel/mapper';
+  }
 
   if (ready === false) {
     const init = () => {
@@ -176,7 +182,7 @@ const App = () => {
           setReady(true);
         })
         .catch(e => {
-          console.warn('test:error:', e);
+          dlog.warn('init:error:', e);
         });
     };
     init();
@@ -192,7 +198,8 @@ const App = () => {
         appKey: appKey,
         agoraAppId: agoraAppId,
       }}
-      type="easemob"
+      enableLog={enableLog}
+      type={accountType}
       requestRTCToken={(params: {
         appKey: string;
         channelId: string;
@@ -201,7 +208,7 @@ const App = () => {
         type?: 'easemob' | 'agora' | undefined;
         onResult: (params: {data?: any; error?: any}) => void;
       }) => {
-        console.log('requestRTCToken:', params);
+        dlog.log('requestRTCToken:', params);
         AppServerClient.getRtcToken({
           userAccount: params.userId,
           channelId: params.channelId,
@@ -209,7 +216,7 @@ const App = () => {
           userChannelId: params.userChannelId,
           type: params.type,
           onResult: (pp: {data?: any; error?: any}) => {
-            console.log('test:', pp);
+            dlog.log('requestRTCToken:onResult:', pp);
             params.onResult(pp);
           },
         });
@@ -220,13 +227,13 @@ const App = () => {
         userId: string;
         onResult: (params: {data?: any; error?: any}) => void;
       }) => {
-        console.log('requestUserMap:', params);
+        dlog.log('requestUserMap:', params);
         AppServerClient.getRtcMap({
           userAccount: params.userId,
           channelId: params.channelId,
           appKey,
           onResult: (pp: {data?: any; error?: any}) => {
-            console.log('requestUserMap:getRtcMap:', pp);
+            dlog.log('requestUserMap:onResult:', pp);
             params.onResult(pp);
           },
         });
@@ -234,7 +241,7 @@ const App = () => {
       requestCurrentUser={(params: {
         onResult: (params: {user: CallUser; error?: any}) => void;
       }) => {
-        console.log('requestCurrentUser:', params);
+        dlog.log('requestCurrentUser:', params);
         ChatClient.getInstance()
           .getCurrentUsername()
           .then(result => {
@@ -246,7 +253,7 @@ const App = () => {
             });
           })
           .catch(error => {
-            console.warn('test:getCurrentUsername:error:', error);
+            dlog.warn('requestCurrentUser:error:', error);
           });
       }}>
       <NavigationContainer>
@@ -277,7 +284,7 @@ export default App;
 export function MainScreen({
   navigation,
 }: NativeStackScreenProps<typeof RootParamsList>): JSX.Element {
-  console.log('test:', defaultId, defaultPs);
+  dlog.log('MainScreen:', defaultId, defaultPs);
   const {call} = useCallkitSdkContext();
   const placeholder1 = 'Please User Id';
   const placeholder2 = 'Please User Password or Token';
@@ -285,40 +292,80 @@ export function MainScreen({
   const [id, setId] = React.useState(defaultId);
   const [token, setToken] = React.useState(defaultPs);
   const [ids, setIds] = React.useState(defaultTargetId);
+  const [v, setV] = React.useState(JSON.stringify(defaultTargetId));
   const [logged, setLogged] = React.useState(false);
-  const type = 'easemob';
+  const type = accountType;
+  const logRef = React.useRef({
+    logHandler: (message?: any, ...optionalParams: any[]) => {
+      console.log(message, ...optionalParams);
+    },
+  });
+
+  dlog.handler = (message?: any, ...optionalParams: any[]) => {
+    logRef.current?.logHandler?.(message, ...optionalParams);
+  };
+
+  const setValue = (t: string) => {
+    try {
+      setIds(JSON.parse(t));
+    } catch (error) {
+      dlog.warn('value:', error);
+    } finally {
+      setV(t);
+    }
+  };
   const login = () => {
-    if (type === 'easemob') {
+    dlog.log('MainScreen:login:', id, token, type);
+    if (type !== 'easemob') {
+      AppServerClient.getAccountToken({
+        userId: id,
+        userPassword: token,
+        onResult: (params: {data?: any; error?: any}) => {
+          if (params.error === undefined) {
+            ChatClient.getInstance()
+              .loginWithAgoraToken(id, params.data.token)
+              .then(() => {
+                dlog.log('loginWithAgoraToken:success:');
+                setLogged(true);
+              })
+              .catch(e => {
+                dlog.log('loginWithAgoraToken:error:', e);
+              });
+          } else {
+            dlog.log('loginWithAgoraToken:error:', params.error);
+          }
+        },
+      });
+    } else {
       ChatClient.getInstance()
         .login(id, token)
         .then(() => {
-          console.log('test:login:success:');
+          dlog.log('login:success:');
           setLogged(true);
         })
         .catch(e => {
-          console.log('test:error:', e);
-        });
-    } else {
-      ChatClient.getInstance()
-        .loginWithAgoraToken(id, token)
-        .then(() => {
-          console.log('test:login:success:');
-          setLogged(false);
-        })
-        .catch(e => {
-          console.log('test:error:', e);
+          dlog.log('login:error:', e);
         });
     }
   };
-  const registry = () => {};
+  const registry = () => {
+    AppServerClient.registerAccount({
+      userId: id,
+      userPassword: token,
+      onResult: (params: {data?: any; error?: any}) => {
+        dlog.log('registerAccount:', id, token, params);
+      },
+    });
+  };
   const logout = () => {
     ChatClient.getInstance()
       .logout()
       .then(() => {
-        console.log('test:logout:success:');
+        dlog.log('logout:success:');
+        setLogged(false);
       })
       .catch(e => {
-        console.log('test:error:', e);
+        dlog.log('logout:error:', e);
       });
   };
   const gotoCall = React.useCallback(
@@ -329,10 +376,10 @@ export function MainScreen({
       inviterId?: string;
     }) => {
       if (logged === false) {
-        console.log('test:', 'Please log in first.');
+        dlog.log('gotoCall:', 'Please log in first.');
       }
       if ((await requestAV()) === false) {
-        console.log('test:', 'Failed to request permission.');
+        dlog.log('gotoCall:', 'Failed to request permission.');
         return;
       }
       if (ids.length > 0) {
@@ -354,7 +401,7 @@ export function MainScreen({
         callType: CallType;
         extension?: any;
       }) => {
-        console.log('onCallReceived:', params);
+        dlog.log('onCallReceived:', params);
         const av =
           params.callType === CallType.Video1v1 ||
           params.callType === CallType.VideoMulti
@@ -368,7 +415,7 @@ export function MainScreen({
         gotoCall({av, sm, isInviter: false, inviterId: params.inviterId});
       },
       onCallOccurError: (params: {channelId: string; error: CallError}) => {
-        console.warn('onCallOccurError:', params);
+        dlog.warn('onCallOccurError:', params);
       },
     } as CallListener;
     call.addListener(listener);
@@ -419,15 +466,8 @@ export function MainScreen({
           <TextInput
             style={styles.input}
             placeholder={placeholder3}
-            value={JSON.stringify(ids)}
-            onChangeText={t => {
-              try {
-                const r = JSON.parse(t);
-                setIds(r as string[]);
-              } catch (error) {
-                console.log('test:error:', error);
-              }
-            }}
+            value={v}
+            onChangeText={setValue}
           />
         </View>
         <View style={styles.buttonContainer}>
@@ -453,6 +493,7 @@ export function MainScreen({
             <Text style={styles.buttonText}>Multi Call</Text>
           </Pressable>
         </View>
+        <LogMemo propsRef={logRef} />
       </View>
     </SafeAreaView>
   );
@@ -510,31 +551,35 @@ export async function requestAV(): Promise<boolean> {
       if (mic === 'granted' && cam === 'granted') {
         return true;
       }
-      console.log('test:', mic, cam, blu);
+      dlog.log('requestAV:', mic, cam, blu);
     } else if (Platform.OS === 'android') {
       const mic = await request('android.permission.CAMERA');
       const cam = await request('android.permission.RECORD_AUDIO');
       const blu = await request('android.permission.BLUETOOTH_CONNECT');
-      if (mic === 'granted' && cam === 'granted' && blu === 'granted') {
+      if (mic === 'granted' && cam === 'granted') {
         return true;
       }
-      console.log('test:', mic, cam, blu);
+      dlog.log('requestAV:', mic, cam, blu);
     }
     return false;
   } catch (error) {
-    console.log('test:', error);
+    dlog.log('requestAV:', error);
     return false;
   }
 }
 ```
 
-### 获取 token 和 用户关系映射
+### User registration, login, acquisition of rtcToken and user relationship mapping
 
 ```typescript
 export class AppServerClient {
   private static _rtcTokenUrl: string =
-    'http://a1.easemob.com/token/rtcToken/v1';
-  private static _mapUrl: string = 'http://a1.easemob.com/channel/mapper';
+    'https://a1.easemob.com/token/rtcToken/v1';
+  private static _mapUrl: string = 'https://a1.easemob.com/channel/mapper';
+  private static _regUrl: string =
+    'https://a41.easemob.com/app/chat/user/register';
+  private static _tokenUrl: string =
+    'https://a41.easemob.com/app/chat/user/login';
 
   protected _(): void {}
   private static async req(params: {
@@ -544,38 +589,38 @@ export class AppServerClient {
     from: 'requestToken' | 'requestUserMap';
     onResult: (p: {data?: any; error?: any}) => void;
   }): Promise<void> {
-    // console.log('AppServerClient:req:', params);
+    dlog.log('AppServerClient:req:', params);
     try {
       const accessToken = await ChatClient.getInstance().getAccessToken();
-      // console.log('AppServerClient:req:', accessToken);
+      dlog.log('AppServerClient:req:', accessToken);
       const json = params.kvs as {
         userAccount: string;
         channelName: string;
         appkey: string;
+        userChannelId?: number;
       };
       const url = `${params.url}?appkey=${encodeURIComponent(
         json.appkey,
       )}&channelName=${encodeURIComponent(
         json.channelName,
       )}&userAccount=${encodeURIComponent(json.userAccount)}`;
-      // console.log('AppServerClient:req:', url);
+      dlog.log('AppServerClient:req:', url);
       const response = await fetch(url, {
         method: params.method,
         headers: {
+          Accept: 'application/json',
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
       });
       const value = await response.json();
-      // console.log('AppServerClient:req:', value);
-      if (value.code !== 'RES_0K') {
-        params.onResult({error: {code: value.code}});
-      } else {
+      dlog.log('AppServerClient:req:', value, value.code);
+      if (value.code === 'RES_0K' || value.code === 'RES_OK') {
         if (params.from === 'requestToken') {
           params.onResult({
             data: {
               token: value.accessToken,
-              uid: value.agoraUserId,
+              uid: value.agoraUserId ?? json.userChannelId,
             },
           });
         } else if (params.from === 'requestUserMap') {
@@ -585,6 +630,8 @@ export class AppServerClient {
             },
           });
         }
+      } else {
+        params.onResult({error: {code: value.code}});
       }
     } catch (error) {
       params.onResult({error});
@@ -599,6 +646,7 @@ export class AppServerClient {
     onResult: (params: {data?: any; error?: any}) => void;
   }): void {
     const tokenUrl = (url: string) => {
+      dlog.log('test:tokenUrl', params.type, url);
       let ret = url;
       if (params.type !== 'easemob') {
         ret += `/${params.channelId}/agorauid/${params.userChannelId!}`;
@@ -613,6 +661,7 @@ export class AppServerClient {
         userAccount: params.userAccount,
         channelName: params.channelId,
         appkey: params.appKey,
+        userChannelId: params.userChannelId,
       },
       from: 'requestToken',
       onResult: params.onResult,
@@ -637,11 +686,73 @@ export class AppServerClient {
     });
   }
 
+  private static async req2(params: {
+    userId: string;
+    userPassword: string;
+    from: 'registerAccount' | 'getAccountToken';
+    onResult: (params: {data?: any; error?: any}) => void;
+  }): Promise<void> {
+    try {
+      let url = '';
+      if (params.from === 'getAccountToken') {
+        url = AppServerClient._tokenUrl;
+      } else if (params.from === 'registerAccount') {
+        url = AppServerClient._regUrl;
+      }
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userAccount: params.userId,
+          userPassword: params.userPassword,
+        }),
+      });
+      const value = await response.json();
+      dlog.log('test:value:', url, value, value.code);
+      if (value.code === 'RES_0K' || value.code === 'RES_OK') {
+        if (params.from === 'getAccountToken') {
+          params.onResult({data: {token: value.accessToken}});
+        } else if (params.from === 'registerAccount') {
+          params.onResult({data: {}});
+        }
+      } else {
+        params.onResult({error: {code: value.code}});
+      }
+    } catch (error) {
+      params.onResult({error});
+    }
+  }
+
+  public static registerAccount(params: {
+    userId: string;
+    userPassword: string;
+    onResult: (params: {data?: any; error?: any}) => void;
+  }): void {
+    this.req2({...params, from: 'registerAccount'});
+  }
+
+  public static getAccountToken(params: {
+    userId: string;
+    userPassword: string;
+    onResult: (params: {data?: any; error?: any}) => void;
+  }): void {
+    this.req2({...params, from: 'getAccountToken'});
+  }
+
   public static set rtcTokenUrl(url: string) {
     AppServerClient._rtcTokenUrl = url;
   }
   public static set mapUrl(url: string) {
     AppServerClient._mapUrl = url;
+  }
+  public static set regUrl(url: string) {
+    AppServerClient._regUrl = url;
+  }
+  public static set tokenUrl(url: string) {
+    AppServerClient._tokenUrl = url;
   }
 }
 ```
@@ -653,7 +764,7 @@ export function CallScreen({
   route,
   navigation,
 }: NativeStackScreenProps<typeof RootParamsList>): JSX.Element {
-  console.log('test:', route.params);
+  dlog.log('CallScreen:', route.params);
   const av = (route.params as any).av as 'audio' | 'video';
   const sm = (route.params as any).sm as 'single' | 'multi';
   const ids = (route.params as any).ids as string[];
@@ -671,14 +782,15 @@ export function CallScreen({
         .getCurrentUsername()
         .then(value => {
           currentId.current = value;
-          isInviter.current = true;
           if (isInviter.current === true) {
             inviterId.current = currentId.current;
+          } else {
+            inviteeIds.current = [currentId.current];
           }
           setReady(true);
         })
         .catch(e => {
-          console.log('test:error:', e);
+          dlog.log('getCurrentUsername:error:', e);
         });
     };
     init();
@@ -688,8 +800,8 @@ export function CallScreen({
     return <ActivityIndicator />;
   }
 
-  console.log(
-    'test:2:',
+  dlog.log(
+    'CallScreen:2:',
     inviteeId.current,
     currentId.current,
     isInviter.current,
@@ -708,11 +820,11 @@ export function CallScreen({
           elapsed: number,
           reason?: CallEndReason | undefined,
         ): void => {
-          console.log('test:', elapsed, reason);
+          dlog.log('CallScreen:SingleCall:', elapsed, reason);
           navigation.goBack();
         }}
         onError={(error: CallError) => {
-          console.log('test:', error);
+          dlog.log('CallScreen:SingleCall:', error);
           navigation.goBack();
         }}
         inviteeId={inviteeId.current}
@@ -730,11 +842,11 @@ export function CallScreen({
           elapsed: number,
           reason?: CallEndReason | undefined,
         ): void => {
-          console.log('test:', elapsed, reason);
+          dlog.log('CallScreen:MultiCall:', elapsed, reason);
           navigation.goBack();
         }}
         onError={(error: CallError) => {
-          console.log('test:', error);
+          dlog.log('CallScreen:MultiCall:', error);
           navigation.goBack();
         }}
         inviteeIds={inviteeIds.current}
@@ -749,7 +861,6 @@ export function CallScreen({
 ## 运行和演示
 
 执行 React-Native 运行命令 `yarn run ios` 或者 `yarn run android`，开始体验吧。
-
 
 ## 更加详细的示例
 
