@@ -13,7 +13,7 @@ import {
   GlobalContainer as CallkitContainer,
 } from 'react-native-chat-callkit';
 
-import {accountType, agoraAppId, appKey} from './AppConfig';
+import {accountType, agoraAppId, appKey, dlog} from './AppConfig';
 import {MainScreen} from './Main';
 import {CallScreen} from './Call';
 import {AppServerClient} from './AppServer';
@@ -23,8 +23,9 @@ import {ActivityIndicator} from 'react-native';
 const Root = createNativeStackNavigator();
 
 const App = () => {
-  console.log('App:');
+  dlog.log('App:');
   const [ready, setReady] = React.useState(false);
+  const enableLog = true;
 
   if (accountType !== 'easemob') {
     AppServerClient.rtcTokenUrl = 'https://a41.easemob.com/token/rtc/channel';
@@ -41,7 +42,7 @@ const App = () => {
           setReady(true);
         })
         .catch(e => {
-          console.warn('test:error:', e);
+          dlog.warn('init:error:', e);
         });
     };
     init();
@@ -57,6 +58,7 @@ const App = () => {
         appKey: appKey,
         agoraAppId: agoraAppId,
       }}
+      enableLog={enableLog}
       type={accountType}
       requestRTCToken={(params: {
         appKey: string;
@@ -66,7 +68,7 @@ const App = () => {
         type?: 'easemob' | 'agora' | undefined;
         onResult: (params: {data?: any; error?: any}) => void;
       }) => {
-        console.log('requestRTCToken:', params);
+        dlog.log('requestRTCToken:', params);
         AppServerClient.getRtcToken({
           userAccount: params.userId,
           channelId: params.channelId,
@@ -74,7 +76,7 @@ const App = () => {
           userChannelId: params.userChannelId,
           type: params.type,
           onResult: (pp: {data?: any; error?: any}) => {
-            console.log('requestRTCToken:onResult:', pp);
+            dlog.log('requestRTCToken:onResult:', pp);
             params.onResult(pp);
           },
         });
@@ -85,13 +87,13 @@ const App = () => {
         userId: string;
         onResult: (params: {data?: any; error?: any}) => void;
       }) => {
-        console.log('requestUserMap:', params);
+        dlog.log('requestUserMap:', params);
         AppServerClient.getRtcMap({
           userAccount: params.userId,
           channelId: params.channelId,
           appKey,
           onResult: (pp: {data?: any; error?: any}) => {
-            console.log('requestUserMap:onResult:', pp);
+            dlog.log('requestUserMap:onResult:', pp);
             params.onResult(pp);
           },
         });
@@ -99,7 +101,7 @@ const App = () => {
       requestCurrentUser={(params: {
         onResult: (params: {user: CallUser; error?: any}) => void;
       }) => {
-        console.log('requestCurrentUser:', params);
+        dlog.log('requestCurrentUser:', params);
         ChatClient.getInstance()
           .getCurrentUsername()
           .then(result => {
@@ -111,7 +113,7 @@ const App = () => {
             });
           })
           .catch(error => {
-            console.warn('requestCurrentUser:getCurrentUsername:error:', error);
+            dlog.warn('requestCurrentUser:error:', error);
           });
       }}>
       <NavigationContainer>

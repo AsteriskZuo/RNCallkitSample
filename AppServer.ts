@@ -1,3 +1,4 @@
+import {dlog} from './AppConfig';
 import {ChatClient} from 'react-native-chat-sdk';
 
 export class AppServerClient {
@@ -17,21 +18,22 @@ export class AppServerClient {
     from: 'requestToken' | 'requestUserMap';
     onResult: (p: {data?: any; error?: any}) => void;
   }): Promise<void> {
-    // console.log('AppServerClient:req:', params);
+    dlog.log('AppServerClient:req:', params);
     try {
       const accessToken = await ChatClient.getInstance().getAccessToken();
-      console.log('AppServerClient:req:', accessToken);
+      dlog.log('AppServerClient:req:', accessToken);
       const json = params.kvs as {
         userAccount: string;
         channelName: string;
         appkey: string;
+        userChannelId?: number;
       };
       const url = `${params.url}?appkey=${encodeURIComponent(
         json.appkey,
       )}&channelName=${encodeURIComponent(
         json.channelName,
       )}&userAccount=${encodeURIComponent(json.userAccount)}`;
-      console.log('AppServerClient:req:', url);
+      dlog.log('AppServerClient:req:', url);
       const response = await fetch(url, {
         method: params.method,
         headers: {
@@ -41,13 +43,13 @@ export class AppServerClient {
         },
       });
       const value = await response.json();
-      console.log('AppServerClient:req:', value, value.code);
+      dlog.log('AppServerClient:req:', value, value.code);
       if (value.code === 'RES_0K' || value.code === 'RES_OK') {
         if (params.from === 'requestToken') {
           params.onResult({
             data: {
               token: value.accessToken,
-              uid: value.agoraUserId,
+              uid: value.agoraUserId ?? json.userChannelId,
             },
           });
         } else if (params.from === 'requestUserMap') {
@@ -73,7 +75,7 @@ export class AppServerClient {
     onResult: (params: {data?: any; error?: any}) => void;
   }): void {
     const tokenUrl = (url: string) => {
-      console.log('test:tokenUrl', params.type, url);
+      dlog.log('test:tokenUrl', params.type, url);
       let ret = url;
       if (params.type !== 'easemob') {
         ret += `/${params.channelId}/agorauid/${params.userChannelId!}`;
@@ -88,6 +90,7 @@ export class AppServerClient {
         userAccount: params.userAccount,
         channelName: params.channelId,
         appkey: params.appKey,
+        userChannelId: params.userChannelId,
       },
       from: 'requestToken',
       onResult: params.onResult,
@@ -112,38 +115,79 @@ export class AppServerClient {
     });
   }
 
+  private static async req2(params: {
+    userId: string;
+    userPassword: string;
+    from: 'registerAccount' | 'getAccountToken';
+    onResult: (params: {data?: any; error?: any}) => void;
+  }): Promise<void> {
+    try {
+      let url = '';
+      if (params.from === 'getAccountToken') {
+        url = AppServerClient._tokenUrl;
+      } else if (params.from === 'registerAccount') {
+        url = AppServerClient._regUrl;
+      }
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userAccount: params.userId,
+          userPassword: params.userPassword,
+        }),
+      });
+      const value = await response.json();
+      dlog.log('test:value:', url, value, value.code);
+      if (value.code === 'RES_0K' || value.code === 'RES_OK') {
+        if (params.from === 'getAccountToken') {
+          params.onResult({data: {token: value.accessToken}});
+        } else if (params.from === 'registerAccount') {
+          params.onResult({data: {}});
+        }
+      } else {
+        params.onResult({error: {code: value.code}});
+      }
+    } catch (error) {
+      params.onResult({error});
+    }
+  }
+
   public static registerAccount(params: {
     userId: string;
     userPassword: string;
     onResult: (params: {data?: any; error?: any}) => void;
   }): void {
-    fetch(AppServerClient._regUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        userAccount: params.userId,
-        userPassword: params.userPassword,
-      }),
-    })
-      .then(async response => {
-        try {
-          const value = await response.json();
-          console.log('test:value:', value, value.code);
-          if (value.code === 'RES_0K' || value.code === 'RES_OK') {
-            params.onResult({data: {}});
-          } else {
-            params.onResult({error: {code: value.code}});
-          }
-        } catch (e) {
-          params.onResult({error: e});
-        }
-      })
-      .catch(e => {
-        console.log('getAccountToken:error:', AppServerClient._regUrl, e);
-        params.onResult({error: e});
-      });
+    this.req2({...params, from: 'registerAccount'});
+    // fetch(AppServerClient._regUrl, {
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //   },
+    //   body: JSON.stringify({
+    //     userAccount: params.userId,
+    //     userPassword: params.userPassword,
+    //   }),
+    // })
+    //   .then(async response => {
+    //     try {
+    //       const value = await response.json();
+    //       dlog.log('test:value:', value, value.code);
+    //       if (value.code === 'RES_0K' || value.code === 'RES_OK') {
+    //         params.onResult({data: {}});
+    //       } else {
+    //         params.onResult({error: {code: value.code}});
+    //       }
+    //     } catch (e) {
+    //       params.onResult({error: e});
+    //     }
+    //   })
+    //   .catch(e => {
+    //     dlog.log('getAccountToken:error:', AppServerClient._regUrl, e);
+    //     params.onResult({error: e});
+    //   });
   }
 
   public static getAccountToken(params: {
@@ -151,33 +195,34 @@ export class AppServerClient {
     userPassword: string;
     onResult: (params: {data?: any; error?: any}) => void;
   }): void {
-    fetch(AppServerClient._tokenUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        userAccount: params.userId,
-        userPassword: params.userPassword,
-      }),
-    })
-      .then(async response => {
-        try {
-          const value = await response.json();
-          console.log('test:value:', value, value.code);
-          if (value.code === 'RES_0K' || value.code === 'RES_OK') {
-            params.onResult({data: {token: value.accessToken}});
-          } else {
-            params.onResult({error: {code: value.code}});
-          }
-        } catch (e) {
-          params.onResult({error: e});
-        }
-      })
-      .catch(e => {
-        console.log('getAccountToken:error:', AppServerClient._tokenUrl, e);
-        params.onResult({error: e});
-      });
+    this.req2({...params, from: 'getAccountToken'});
+    // fetch(AppServerClient._tokenUrl, {
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //   },
+    //   body: JSON.stringify({
+    //     userAccount: params.userId,
+    //     userPassword: params.userPassword,
+    //   }),
+    // })
+    //   .then(async response => {
+    //     try {
+    //       const value = await response.json();
+    //       dlog.log('test:value:', value, value.code);
+    //       if (value.code === 'RES_0K' || value.code === 'RES_OK') {
+    //         params.onResult({data: {token: value.accessToken}});
+    //       } else {
+    //         params.onResult({error: {code: value.code}});
+    //       }
+    //     } catch (e) {
+    //       params.onResult({error: e});
+    //     }
+    //   })
+    //   .catch(e => {
+    //     dlog.log('getAccountToken:error:', AppServerClient._tokenUrl, e);
+    //     params.onResult({error: e});
+    //   });
   }
 
   public static set rtcTokenUrl(url: string) {

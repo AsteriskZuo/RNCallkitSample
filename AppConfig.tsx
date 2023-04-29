@@ -1,3 +1,5 @@
+import {ChatLog} from 'react-native-chat-sdk';
+
 export const RootParamsList: Record<string, object | undefined> = {
   Main: {},
   Call: {},
@@ -20,3 +22,6 @@ try {
 } catch (error) {
   console.error(error);
 }
+
+export const dlog = new ChatLog();
+dlog.tag = 'demo';

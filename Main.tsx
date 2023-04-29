@@ -7,6 +7,7 @@ import {
   defaultId,
   defaultPs,
   defaultTargetId,
+  dlog,
 } from './AppConfig';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {TextInput} from 'react-native';
@@ -19,11 +20,12 @@ import {
 } from 'react-native-chat-callkit';
 import {requestAV} from './AppPermission';
 import {AppServerClient} from './AppServer';
+import {LogMemo} from './AppLog';
 
 export function MainScreen({
   navigation,
 }: NativeStackScreenProps<typeof RootParamsList>): JSX.Element {
-  console.log('test:', defaultId, defaultPs);
+  dlog.log('MainScreen:', defaultId, defaultPs);
   const {call} = useCallkitSdkContext();
   const placeholder1 = 'Please User Id';
   const placeholder2 = 'Please User Password or Token';
@@ -31,28 +33,47 @@ export function MainScreen({
   const [id, setId] = React.useState(defaultId);
   const [token, setToken] = React.useState(defaultPs);
   const [ids, setIds] = React.useState(defaultTargetId);
+  const [v, setV] = React.useState(JSON.stringify(defaultTargetId));
   const [logged, setLogged] = React.useState(false);
   const type = accountType;
+  const logRef = React.useRef({
+    logHandler: (message?: any, ...optionalParams: any[]) => {
+      console.log(message, ...optionalParams);
+    },
+  });
+
+  dlog.handler = (message?: any, ...optionalParams: any[]) => {
+    logRef.current?.logHandler?.(message, ...optionalParams);
+  };
+
+  const setValue = (t: string) => {
+    try {
+      setIds(JSON.parse(t));
+    } catch (error) {
+      dlog.warn('value:', error);
+    } finally {
+      setV(t);
+    }
+  };
   const login = () => {
-    console.log('test:login:', id, token, type);
+    dlog.log('MainScreen:login:', id, token, type);
     if (type !== 'easemob') {
       AppServerClient.getAccountToken({
         userId: id,
         userPassword: token,
         onResult: (params: {data?: any; error?: any}) => {
-          console.log('test:', id, token, params);
           if (params.error === undefined) {
             ChatClient.getInstance()
               .loginWithAgoraToken(id, params.data.token)
               .then(() => {
-                console.log('test:loginWithAgoraToken:success:');
-                setLogged(false);
+                dlog.log('loginWithAgoraToken:success:');
+                setLogged(true);
               })
               .catch(e => {
-                console.log('test:error:', e);
+                dlog.log('loginWithAgoraToken:error:', e);
               });
           } else {
-            console.log('test:error:', params.error);
+            dlog.log('loginWithAgoraToken:error:', params.error);
           }
         },
       });
@@ -60,11 +81,11 @@ export function MainScreen({
       ChatClient.getInstance()
         .login(id, token)
         .then(() => {
-          console.log('test:login:success:');
+          dlog.log('login:success:');
           setLogged(true);
         })
         .catch(e => {
-          console.log('test:error:', e);
+          dlog.log('login:error:', e);
         });
     }
   };
@@ -73,7 +94,7 @@ export function MainScreen({
       userId: id,
       userPassword: token,
       onResult: (params: {data?: any; error?: any}) => {
-        console.log('test:', id, token, params);
+        dlog.log('registerAccount:', id, token, params);
       },
     });
   };
@@ -81,10 +102,11 @@ export function MainScreen({
     ChatClient.getInstance()
       .logout()
       .then(() => {
-        console.log('test:logout:success:');
+        dlog.log('logout:success:');
+        setLogged(false);
       })
       .catch(e => {
-        console.log('test:error:', e);
+        dlog.log('logout:error:', e);
       });
   };
   const gotoCall = React.useCallback(
@@ -95,10 +117,10 @@ export function MainScreen({
       inviterId?: string;
     }) => {
       if (logged === false) {
-        console.log('test:', 'Please log in first.');
+        dlog.log('gotoCall:', 'Please log in first.');
       }
       if ((await requestAV()) === false) {
-        console.log('test:', 'Failed to request permission.');
+        dlog.log('gotoCall:', 'Failed to request permission.');
         return;
       }
       if (ids.length > 0) {
@@ -120,7 +142,7 @@ export function MainScreen({
         callType: CallType;
         extension?: any;
       }) => {
-        console.log('onCallReceived:', params);
+        dlog.log('onCallReceived:', params);
         const av =
           params.callType === CallType.Video1v1 ||
           params.callType === CallType.VideoMulti
@@ -134,7 +156,7 @@ export function MainScreen({
         gotoCall({av, sm, isInviter: false, inviterId: params.inviterId});
       },
       onCallOccurError: (params: {channelId: string; error: CallError}) => {
-        console.warn('onCallOccurError:', params);
+        dlog.warn('onCallOccurError:', params);
       },
     } as CallListener;
     call.addListener(listener);
@@ -185,15 +207,8 @@ export function MainScreen({
           <TextInput
             style={styles.input}
             placeholder={placeholder3}
-            value={JSON.stringify(ids)}
-            onChangeText={t => {
-              try {
-                const r = JSON.parse(t);
-                setIds(r as string[]);
-              } catch (error) {
-                console.log('test:error:', error);
-              }
-            }}
+            value={v}
+            onChangeText={setValue}
           />
         </View>
         <View style={styles.buttonContainer}>
@@ -219,6 +234,7 @@ export function MainScreen({
             <Text style={styles.buttonText}>Multi Call</Text>
           </Pressable>
         </View>
+        <LogMemo propsRef={logRef} />
       </View>
     </SafeAreaView>
   );

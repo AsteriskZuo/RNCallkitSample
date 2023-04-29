@@ -1,3 +1,4 @@
+import {dlog} from './AppConfig';
 import {Platform} from 'react-native';
 import {request} from 'react-native-permissions';
 
@@ -10,7 +11,7 @@ export async function requestAV(): Promise<boolean> {
       if (mic === 'granted' && cam === 'granted') {
         return true;
       }
-      console.log('test:', mic, cam, blu);
+      dlog.log('requestAV:', mic, cam, blu);
     } else if (Platform.OS === 'android') {
       const mic = await request('android.permission.CAMERA');
       const cam = await request('android.permission.RECORD_AUDIO');
@@ -18,11 +19,11 @@ export async function requestAV(): Promise<boolean> {
       if (mic === 'granted' && cam === 'granted') {
         return true;
       }
-      console.log('test:', mic, cam, blu);
+      dlog.log('requestAV:', mic, cam, blu);
     }
     return false;
   } catch (error) {
-    console.log('test:', error);
+    dlog.log('requestAV:', error);
     return false;
   }
 }

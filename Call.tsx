@@ -1,6 +1,6 @@
 import * as React from 'react';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import type {RootParamsList} from './AppConfig';
+import {RootParamsList, dlog} from './AppConfig';
 import {ActivityIndicator} from 'react-native';
 import {
   CallEndReason,
@@ -14,7 +14,7 @@ export function CallScreen({
   route,
   navigation,
 }: NativeStackScreenProps<typeof RootParamsList>): JSX.Element {
-  console.log('test:', route.params);
+  dlog.log('CallScreen:', route.params);
   const av = (route.params as any).av as 'audio' | 'video';
   const sm = (route.params as any).sm as 'single' | 'multi';
   const ids = (route.params as any).ids as string[];
@@ -32,14 +32,15 @@ export function CallScreen({
         .getCurrentUsername()
         .then(value => {
           currentId.current = value;
-          isInviter.current = true;
           if (isInviter.current === true) {
             inviterId.current = currentId.current;
+          } else {
+            inviteeIds.current = [currentId.current];
           }
           setReady(true);
         })
         .catch(e => {
-          console.log('test:error:', e);
+          dlog.log('getCurrentUsername:error:', e);
         });
     };
     init();
@@ -49,8 +50,8 @@ export function CallScreen({
     return <ActivityIndicator />;
   }
 
-  console.log(
-    'test:2:',
+  dlog.log(
+    'CallScreen:2:',
     inviteeId.current,
     currentId.current,
     isInviter.current,
@@ -69,11 +70,11 @@ export function CallScreen({
           elapsed: number,
           reason?: CallEndReason | undefined,
         ): void => {
-          console.log('test:', elapsed, reason);
+          dlog.log('CallScreen:SingleCall:', elapsed, reason);
           navigation.goBack();
         }}
         onError={(error: CallError) => {
-          console.log('test:', error);
+          dlog.log('CallScreen:SingleCall:', error);
           navigation.goBack();
         }}
         inviteeId={inviteeId.current}
@@ -91,11 +92,11 @@ export function CallScreen({
           elapsed: number,
           reason?: CallEndReason | undefined,
         ): void => {
-          console.log('test:', elapsed, reason);
+          dlog.log('CallScreen:MultiCall:', elapsed, reason);
           navigation.goBack();
         }}
         onError={(error: CallError) => {
-          console.log('test:', error);
+          dlog.log('CallScreen:MultiCall:', error);
           navigation.goBack();
         }}
         inviteeIds={inviteeIds.current}
