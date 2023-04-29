@@ -40,7 +40,7 @@ yarn add react-native-agora
 **Description** There are two ways to integrate `react-native-chat-callkit`:
 
 1. Integrate local dependencies `yarn add <local repo path>`
-2. Integrate npm package `yarn add react-native-chat-callkit`
+2. Integrate npm package `yarn add react-native-chat-callkit@0.1.1-beta.2`
 
 [react-native-chat-callkit repo](https://github.com/easemob/react-native-chat-library/packages/react-native-chat-callkit)
 

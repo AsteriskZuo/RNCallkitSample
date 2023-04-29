@@ -40,7 +40,7 @@ yarn add react-native-agora
 **说明** 集成 `react-native-chat-callkit` 有两种方式：
 
 1. 集成本地依赖 `yarn add <local repo path>`
-2. 集成 npm 包 `yarn add react-native-chat-callkit`
+2. 集成 npm 包 `yarn add react-native-chat-callkit@0.1.1-beta.2`
 
 [react-native-chat-callkit repo](https://github.com/easemob/react-native-chat-library/packages/react-native-chat-callkit)
 
