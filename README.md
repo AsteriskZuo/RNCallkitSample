@@ -79,6 +79,10 @@ Add permissions in `Info.plist`
 <string>photo</string>
 <key>NSUserNotificationsUsageDescription</key>
 <string>notifications</string>
+<key>NSBluetoothAlwaysUsageDescription</key>
+<string>blue</string>
+<key>NSBluetoothPeripheralUsageDescription</key>
+<string>blue peripheral</string>
 ```
 
 Add additional configuration in `Podfile`

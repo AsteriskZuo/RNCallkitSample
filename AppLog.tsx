@@ -18,10 +18,10 @@ export const LogMemo = React.memo(({propsRef}: LogProps) => {
       let str = logRef.current;
       for (const a of arr) {
         if (a?.toString) {
-          str += a.toString();
+          str += a.toString() + ' ';
         }
       }
-      if (str.length > 0) {
+      if (str.trim().length > 0) {
         str += '\n';
       }
       const ret = str.matchAll(/\n/g);

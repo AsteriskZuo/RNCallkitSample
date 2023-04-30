@@ -79,6 +79,10 @@ yarn add react-native-get-random-values
 	<string>photo</string>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>notifications</string>
+  <key>NSBluetoothAlwaysUsageDescription</key>
+	<string>blue</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>blue peripheral</string>
 ```
 
 在 `Podfile` 添加额外配置
