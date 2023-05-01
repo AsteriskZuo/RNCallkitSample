@@ -61,7 +61,7 @@ export function CallScreen({
   if (sm === 'single') {
     return (
       <SingleCall
-        inviterId={inviteeId.current}
+        inviterId={inviterId.current}
         currentId={currentId.current}
         currentName={currentId.current}
         callType={callType}
@@ -83,7 +83,7 @@ export function CallScreen({
   } else {
     return (
       <MultiCall
-        inviterId={inviteeId.current}
+        inviterId={inviterId.current}
         currentId={currentId.current}
         currentName={currentId.current}
         callType={callType}
