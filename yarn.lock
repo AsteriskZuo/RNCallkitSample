@@ -6010,6 +6010,11 @@ pure-rand@^6.0.0:
   resolved "https://registry.npmjs.org/pure-rand/-/pure-rand-6.0.2.tgz#a9c2ddcae9b68d736a8163036f088a2781c8b306"
   integrity sha512-6Yg0ekpKICSjPswYOuC5sku/TSWaRYlA0qsXqJgM/d/4pLPHPuTxK7Nbf7jFKzAeedUhR8C7K9Uv63FBsSo8xQ==
 
+pure-uuid@~1.6.3:
+  version "1.6.3"
+  resolved "https://registry.npmmirror.com/pure-uuid/-/pure-uuid-1.6.3.tgz#d0e1894720328612ce55cdd08d90443dd7c1fc7f"
+  integrity sha512-5cBiGtFWAulm5WwPWpUTjqJay6mJL5rm3Oru9vCXgwgWcoYtBEpjJbxjsWYVX7omr1jP5iw27lXUB6fDIdoOdw==
+
 query-string@^7.1.3:
   version "7.1.3"
   resolved "https://registry.npmjs.org/query-string/-/query-string-7.1.3.tgz#a1cf90e994abb113a325804a972d98276fe02328"
@@ -6067,15 +6072,18 @@ react-native-agora@^4.1.2:
     json-bigint "^1.0.0"
     ts-interface-checker "^1.0.2"
 
-react-native-chat-callkit@../react-native-chat-library/packages/react-native-chat-callkit:
-  version "0.1.0"
+react-native-chat-callkit@0.1.1-beta.3:
+  version "0.1.1-beta.3"
+  resolved "https://registry.npmmirror.com/react-native-chat-callkit/-/react-native-chat-callkit-0.1.1-beta.3.tgz#6a79447e61ff05d3ba58aabb8c89f800c7ae7bf7"
+  integrity sha512-dx8Zdn0SbsXvTUU+WHx1MCiJ9WAhMSOq79u0w5IFj9eg7X2r4R8D4XdgJlJ69ao6C4TvhXNs6fnv5lvgqmylXw==
   dependencies:
     "@react-native-camera-roll/camera-roll" "^5.2.0"
     "@react-native-community/blur" "^4.3.0"
     "@rneui/base" "^4.0.0-rc.7"
     "@rneui/themed" "^4.0.0-rc.7"
+    pure-uuid "~1.6.3"
     react-native-agora "^4.1.2"
-    react-native-chat-sdk "1.1.2-beta.3"
+    react-native-chat-sdk "1.1.2-beta.5"
     react-native-device-info "^10.4.0"
     react-native-fast-image "^8.6.3"
     react-native-get-random-values "^1.8.0"
@@ -6085,12 +6093,16 @@ react-native-chat-callkit@../react-native-chat-library/packages/react-native-cha
     react-native-safe-area-context "^4.4.1"
     react-native-screens "^3.18.2"
     react-native-tab-view "^3.3.0"
-    uuid "^9.0.0"
 
-react-native-chat-sdk@1.1.2-beta.3:
-  version "1.1.2-beta.3"
-  resolved "https://registry.npmjs.org/react-native-chat-sdk/-/react-native-chat-sdk-1.1.2-beta.3.tgz#74cd30f142bed42e3d48419948f6517d561b47bf"
-  integrity sha512-RczxNME8f9sQuV5UTazEDNsxRp1mXkPfRZ6QlMZCyvn/+8RzubD5vNWUjcNDbWIzo7YgIXD7kbPDTu+CCQL93w==
+react-native-chat-sdk@1.1.2:
+  version "1.1.2"
+  resolved "https://registry.npmmirror.com/react-native-chat-sdk/-/react-native-chat-sdk-1.1.2.tgz#e5162ff3c8054b8366c8f9dddda51a61feea2a88"
+  integrity sha512-0gRQWWWpKZy1dAo/YV0gcTxBHOr8FyHYr+1idcsAEPCWao63/wnUDQ0QJiobBQXfFLkFleW+/MGzsIruEUXJxA==
+
+react-native-chat-sdk@1.1.2-beta.5:
+  version "1.1.2-beta.5"
+  resolved "https://registry.npmmirror.com/react-native-chat-sdk/-/react-native-chat-sdk-1.1.2-beta.5.tgz#a9dddd0962f86c44f59a2947087ba07f47161762"
+  integrity sha512-Y7jWx78yszg1JxRcFpVpLEvBMgpwjh13t49BOOHwZHYUczRbKTzieE+0XYqoxTEnNgxKAxVYiRh/v5lweInDjg==
 
 react-native-codegen@^0.71.5:
   version "0.71.5"
@@ -7255,11 +7267,6 @@ uuid@^7.0.3:
   version "7.0.3"
   resolved "https://registry.npmjs.org/uuid/-/uuid-7.0.3.tgz#c5c9f2c8cf25dc0a372c4df1441c41f5bd0c680b"
   integrity sha512-DPSke0pXhTZgoF/d+WSt2QaKMCFSfx7QegxEWT+JOuHF5aWrKEn0G+ztjuJg/gG8/ItK+rbPCD/yNv8yyih6Cg==
-
-uuid@^9.0.0:
-  version "9.0.0"
-  resolved "https://registry.npmjs.org/uuid/-/uuid-9.0.0.tgz#592f550650024a38ceb0c562f2f6aa435761efb5"
-  integrity sha512-MXcSTerfPa4uqyzStbRoTgt5XIe3x5+42+q1sDuy3R5MDk66URdLMOZe5aPX/SQd+kuYAh0FdP/pO28IkQyTeg==
 
 v8-to-istanbul@^9.0.1:
   version "9.1.0"

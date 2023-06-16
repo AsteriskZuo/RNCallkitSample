@@ -1,74 +1,67 @@
-_English | [中文](./README.zh.md)_
+AgoraChatCallKit is an open-source audio and video UI library developed based on Agora's real-time communications and signaling services. With this library, you can implement audio and video calling functionalities with enhanced synchronization between multiple devices. In scenarios where a user ID is logged in to multiple devices, once the user deals with an incoming call that is ringing on one device, all the other devices stop ringing simultaneously.
 
----
+This page describes how to implement real-time audio and video communications using the AgoraChatCallKit.
 
-## Example project introduction
+## Understand the tech
 
-This project is a demo project of Callkit SDK.
+The basic process for implementing real-time audio and video communications with AgoraChatCallKit is as follows:
 
-Mainly for the simplest demo of Callkit SDK. For more detailed usage examples, please see other example projects.
+1. Set up the local environment, including the `appkey`, `appAgoraId` and other information.
+2. Initialize the CallKit component.
+3. Add a listener to receive notifications, including receiving invitation notifications and error notifications.
+4. For the call invitation on the caller side, load and display the components on the call page and perform the corresponding call operations on the components.
+5. For the reception of the call invitation on the callee side, load and display the components on the call page.
 
-## environment
+## Prerequisites
 
-- react-native: 0.70.0 or higher
+Before proceeding, ensure that your development environment has the following:
+
+- react-native: 0.66.0 or later
 - nodejs: 16.18.0 or later
 
-## create project
+## Project setup
+
+### Configure the local environment
+
+1. Generate local environment variables:
 
 ```sh
-npx react-native@latest init RNCallkitSample --template react-native-template-typescript
+yarn run env
 ```
 
-## Project initialization
+2. Enter your local environment variables:
 
-```sh
-yarn
+```typescript
+export const RootParamsList: Record<string, object | undefined> = {
+  Main: {},
+  Call: {},
+};
+export let appKey = '<your app key>';
+export let agoraAppId = '<App ID of your Agora RTC>';
+export let defaultId = '<your user ID>';
+export let defaultPs = '<your user token>';
+export let accountType: 'agora' | 'easemob' | undefined;
+export const autoLogin = false;
+export const debugModel = true;
+export let defaultTargetId = ['<target ID>'];
+
+try {
+  appKey = require('./env').appKey;
+  defaultId = require('./env').id;
+  defaultPs = require('./env').ps;
+  agoraAppId = require('./env').agoraAppId;
+  accountType = require('./env').accountType;
+  defaultTargetId = [require('./env').targetId as string];
+} catch (error) {
+  console.error(error);
+}
 ```
 
-## Project configuration
+### Configure app permissions
 
-### package.json
+iOS:
 
-Add Chat SDK and Callkit SDK
-
-```sh
-yarn add react-native-chat-sdk
-yarn add react-native-chat-Callkit
-yarn add react-native-agora
-```
-
-**Description** There are two ways to integrate `react-native-chat-callkit`:
-
-1. Integrate local dependencies `yarn add <local repo path>`
-2. Integrate npm package `yarn add react-native-chat-callkit@0.1.1-beta.2`
-
-[react-native-chat-callkit repo](https://github.com/easemob/react-native-chat-library/packages/react-native-chat-callkit)
-
-Add page routing component
-
-```sh
-yarn add @react-navigation/native
-yarn add @react-navigation/native-stack
-yarn add react-native-safe-area-context
-yarn add react-native-screens
-```
-
-Add dependencies required by Callkit SDK
-
-```sh
-yarn add @react-native-camera-roll/camera-roll
-yarn add @react-native-community/blur
-yarn add @react-native-firebase/app
-yarn add @react-native-firebase/messaging
-yarn add react-native-device-info
-yarn add react-native-permissions
-yarn add react-native-vector-icons
-yarn add react-native-get-random-values
-```
-
-### ios
-
-Add permissions in `Info.plist`
+1. Add permissions in `Info.plist`:
 
 ```xml
 <key>NSLocationWhenInUseUsageDescription</key>
@@ -85,7 +78,7 @@ Add permissions in `Info.plist`
 <string>blue peripheral</string>
 ```
 
-Add additional configuration in `Podfile`
+2. Add additional configurations in `Podfile`:
 
 ```ruby
    pod 'GoogleUtilities', :modular_headers => true
@@ -101,9 +94,9 @@ Add additional configuration in `Podfile`
    pod 'Permission-PhotoLibrary', :path => "#{permissions_path}/PhotoLibrary"
 ```
 
-### android
+Android:
 
-Add permission in `AndroidManifest.xml`
+1. Add permissions in `AndroidManifest.xml`:
 
 ```xml
    <uses-permission android:name="android.permission.INTERNET"/>
@@ -113,7 +106,7 @@ Add permission in `AndroidManifest.xml`
    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 ```
 
-Add `kotlin` support in `build.gradle`
+2. Add `kotlin` support in `build.gradle`:
 
 ```groovy
 buildscript {
@@ -131,37 +124,87 @@ buildscript {
 }
 ```
 
-## Code
-
-### Configure the local environment
+3. Request permissions dynamically.
 
 ```typescript
-export const RootParamsList: Record<string, object | undefined> = {
-  Main: {},
-  Call: {},
-};
-export let appKey = '1135220126133718#demo';
-export let agoraAppId = '';
-export let defaultId = 'asterisk001';
-export let defaultPs = 'qwerty';
-export let accountType: 'agora' | 'easemob' | undefined;
-export const autoLogin = false;
-export const debugModel = true;
-export let defaultTargetId = ['asterisk025'];
+import {request} from 'react-native-permissions';
 
-try {
-  appKey = require('./env').appKey;
-  defaultId = require('./env').id;
-  defaultPs = require('./env').ps;
-  agoraAppId = require('./env').agoraAppId;
-  accountType = require('./env').accountType;
-  defaultTargetId = [require('./env').targetId as string];
-} catch (error) {
-  console.error(error);
+export async function requestAV(): Promise<boolean> {
+  try {
+    if (Platform.OS === 'ios') {
+      const mic = await request('ios.permission.MICROPHONE');
+      const cam = await request('ios.permission.CAMERA');
+      const blu = await request('ios.permission.BLUETOOTH_PERIPHERAL');
+      if (mic === 'granted' && cam === 'granted') {
+        return true;
+      }
+      dlog.log('requestAV:', mic, cam, blu);
+    } else if (Platform.OS === 'android') {
+      const mic = await request('android.permission.CAMERA');
+      const cam = await request('android.permission.RECORD_AUDIO');
+      const blu = await request('android.permission.BLUETOOTH_CONNECT');
+      if (mic === 'granted' && cam === 'granted') {
+        return true;
+      }
+      dlog.log('requestAV:', mic, cam, blu);
+    }
+    return false;
+  } catch (error) {
+    dlog.log('requestAV:', error);
+    return false;
+  }
 }
 ```
 
-### Initialize Callkit SDK
+### Integrate the Agora Chat SDK and the CallKit SDK
+
+1. Open a terminal, enter the `RNCallkitSample` directory, and run the following commands to add the Agora Chat SDK and UIKit SDK in `package.json`.
+
+```sh
+yarn add react-native-chat-sdk
+yarn add react-native-chat-Callkit
+yarn add react-native-agora
+```
+
+For the project details, see the [react-native-chat-callkit repo](https://github.com/AgoraIO-Usecase/AgoraChat-rn/tree/dev/packages/react-native-chat-callkit).
+
+2. Add page routing components：
+
+```sh
+yarn add @react-navigation/native
+yarn add @react-navigation/native-stack
+yarn add react-native-safe-area-context
+yarn add react-native-screens
+```
+
+3. Add dependencies required by the CallKit SDK:
+
+```sh
+yarn add @react-native-camera-roll/camera-roll
+yarn add @react-native-community/blur
+yarn add @react-native-firebase/app
+yarn add @react-native-firebase/messaging
+yarn add react-native-device-info
+yarn add react-native-permissions
+yarn add react-native-vector-icons
+yarn add react-native-get-random-values
+```
+
+## Implement audio and video calling
+
+This section introduces the core steps for implementing audio and video calls in your project.
+
+### Initialize AgoraChatCallKit
+
+During the initialization, the following parameters are configured:
+
+- `appKey`：Required by the Agora Chat SDK. For details, see [Get the information of the Chat project](./enable.html#get-the-information-of-the-chat-project).
+- `agoraAppId`: Required by Agora RTC. For details, see [Get the App ID](https://docs.agora.io/en/video-calling/reference/manage-agora-account?platform=android#get-the-app-id).
+- `requestRTCToken`
+- `requestUserMap`
+- `requestCurrentUser`
+
+For a call, the call signaling is implemented via `react-native-agora-chat` and the audio or video call process is implemented via `react-native-agora`. As the accounts of Agora RTC and Agora Chat are not globally recognizable at present, the accounts need to be mapped via a method. During a call, you need to implement the method to get the Agora Chat RTC token and the method to map the Agora RTC user ID (UID) and Agora Chat user ID.
 
 ```typescript
 const Root = createNativeStackNavigator();
@@ -180,7 +223,11 @@ const App = () => {
     const init = () => {
       ChatClient.getInstance()
         .init(
-          new ChatOptions({appKey: appKey, autoLogin: false, debugModel: true}),
+          new ChatOptions({
+            appKey: appKey,
+            autoLogin: false,
+            debugModel: true,
+          }),
         )
         .then(() => {
           setReady(true);
@@ -282,584 +329,306 @@ const App = () => {
 export default App;
 ```
 
-### Login and logout
+### Log in
+
+The login implementation logic is as follows:
 
 ```typescript
-export function MainScreen({
-  navigation,
-}: NativeStackScreenProps<typeof RootParamsList>): JSX.Element {
-  dlog.log('MainScreen:', defaultId, defaultPs);
-  const {call} = useCallkitSdkContext();
-  const placeholder1 = 'Please User Id';
-  const placeholder2 = 'Please User Password or Token';
-  const placeholder3 = 'Please Call Target Ids';
-  const [id, setId] = React.useState(defaultId);
-  const [token, setToken] = React.useState(defaultPs);
-  const [ids, setIds] = React.useState(defaultTargetId);
-  const [v, setV] = React.useState(JSON.stringify(defaultTargetId));
-  const [logged, setLogged] = React.useState(false);
-  const type = accountType;
-  const logRef = React.useRef({
-    logHandler: (message?: any, ...optionalParams: any[]) => {
-      console.log(message, ...optionalParams);
-    },
-  });
-
-  dlog.handler = (message?: any, ...optionalParams: any[]) => {
-    logRef.current?.logHandler?.(message, ...optionalParams);
-  };
-
-  const setValue = (t: string) => {
-    try {
-      setIds(JSON.parse(t));
-    } catch (error) {
-      dlog.warn('value:', error);
-    } finally {
-      setV(t);
-    }
-  };
-  const login = () => {
-    dlog.log('MainScreen:login:', id, token, type);
-    if (type !== 'easemob') {
-      AppServerClient.getAccountToken({
-        userId: id,
-        userPassword: token,
-        onResult: (params: {data?: any; error?: any}) => {
-          if (params.error === undefined) {
-            ChatClient.getInstance()
-              .loginWithAgoraToken(id, params.data.token)
-              .then(() => {
-                dlog.log('loginWithAgoraToken:success:');
-                setLogged(true);
-              })
-              .catch(e => {
-                dlog.log('loginWithAgoraToken:error:', e);
-              });
-          } else {
-            dlog.log('loginWithAgoraToken:error:', params.error);
-          }
-        },
-      });
-    } else {
+AppServerClient.getAccountToken({
+  userId: id,
+  userPassword: token,
+  onResult: (params: {data?: any; error?: any}) => {
+    if (params.error === undefined) {
       ChatClient.getInstance()
-        .login(id, token)
+        .loginWithAgoraToken(id, params.data.token)
         .then(() => {
-          dlog.log('login:success:');
+          dlog.log('loginWithAgoraToken:success:');
           setLogged(true);
         })
         .catch(e => {
-          dlog.log('login:error:', e);
+          dlog.log('loginWithAgoraToken:error:', e);
         });
+    } else {
+      dlog.log('loginWithAgoraToken:error:', params.error);
     }
-  };
-  const registry = () => {
-    AppServerClient.registerAccount({
-      userId: id,
-      userPassword: token,
-      onResult: (params: {data?: any; error?: any}) => {
-        dlog.log('registerAccount:', id, token, params);
-      },
-    });
-  };
-  const logout = () => {
-    ChatClient.getInstance()
-      .logout()
-      .then(() => {
-        dlog.log('logout:success:');
-        setLogged(false);
-      })
-      .catch(e => {
-        dlog.log('logout:error:', e);
-      });
-  };
-  const gotoCall = React.useCallback(
-    async (params: {
-      av: 'audio' | 'video';
-      sm: 'single' | 'multi';
-      isInviter: boolean;
-      inviterId?: string;
-    }) => {
-      if (logged === false) {
-        dlog.log('gotoCall:', 'Please log in first.');
-      }
-      if ((await requestAV()) === false) {
-        dlog.log('gotoCall:', 'Failed to request permission.');
-        return;
-      }
-      if (ids.length > 0) {
-        const {av, sm, isInviter, inviterId} = params;
-        if (isInviter === false) {
-          navigation.push('Call', {ids, av, sm, isInviter, inviterId});
-        } else {
-          navigation.push('Call', {ids, av, sm, isInviter});
-        }
-      }
-    },
-    [ids, logged, navigation],
-  );
-  const addListener = React.useCallback(() => {
-    const listener = {
-      onCallReceived: (params: {
-        channelId: string;
-        inviterId: string;
-        callType: CallType;
-        extension?: any;
-      }) => {
-        dlog.log('onCallReceived:', params);
-        const av =
-          params.callType === CallType.Video1v1 ||
-          params.callType === CallType.VideoMulti
-            ? 'video'
-            : 'audio';
-        const sm =
-          params.callType === CallType.AudioMulti ||
-          params.callType === CallType.VideoMulti
-            ? 'multi'
-            : 'single';
-        gotoCall({av, sm, isInviter: false, inviterId: params.inviterId});
-      },
-      onCallOccurError: (params: {channelId: string; error: CallError}) => {
-        dlog.warn('onCallOccurError:', params);
-      },
-    } as CallListener;
-    call.addListener(listener);
-    return () => {
-      call.removeListener(listener);
-    };
-  }, [call, gotoCall]);
-  React.useEffect(() => {
-    const ret = addListener();
-    return () => ret();
-  }, [addListener]);
-  return (
-    <SafeAreaView
-      style={styles.container}
-      mode="padding"
-      edges={['right', 'left', 'bottom']}>
-      <View style={styles.container}>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder={placeholder1}
-            value={id}
-            onChangeText={t => {
-              setId(t);
-            }}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder={placeholder2}
-            value={token}
-            onChangeText={t => {
-              setToken(t);
-            }}
-          />
-        </View>
-        <View style={styles.buttonContainer}>
-          <Pressable style={styles.button} onPress={login}>
-            <Text style={styles.buttonText}>SIGN IN</Text>
-          </Pressable>
-          <Pressable style={styles.button} onPress={registry}>
-            <Text style={styles.buttonText}>SIGN UP</Text>
-          </Pressable>
-          <Pressable style={styles.button} onPress={logout}>
-            <Text style={styles.buttonText}>SIGN OUT</Text>
-          </Pressable>
-        </View>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder={placeholder3}
-            value={v}
-            onChangeText={setValue}
-          />
-        </View>
-        <View style={styles.buttonContainer}>
-          <Pressable
-            style={styles.button}
-            onPress={() => {
-              gotoCall({av: 'audio', sm: 'single', isInviter: true});
-            }}>
-            <Text style={styles.buttonText}>Single Audio Call</Text>
-          </Pressable>
-          <Pressable
-            style={styles.button}
-            onPress={() => {
-              gotoCall({av: 'video', sm: 'single', isInviter: true});
-            }}>
-            <Text style={styles.buttonText}>Single Video Call</Text>
-          </Pressable>
-          <Pressable
-            style={styles.button}
-            onPress={() => {
-              gotoCall({av: 'video', sm: 'multi', isInviter: true});
-            }}>
-            <Text style={styles.buttonText}>Multi Call</Text>
-          </Pressable>
-        </View>
-        <LogMemo propsRef={logRef} />
-      </View>
-    </SafeAreaView>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    flexWrap: 'wrap',
-  },
-  button: {
-    height: 40,
-    marginHorizontal: 10,
-    backgroundColor: 'blue',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
-  },
-  buttonText: {
-    color: 'white',
-    fontWeight: '500',
-  },
-  inputContainer: {
-    marginHorizontal: 20,
-    // backgroundColor: 'red',
-  },
-  input: {
-    height: 40,
-    borderBottomColor: '#0041FF',
-    borderBottomWidth: 1,
-    backgroundColor: 'white',
-    marginVertical: 10,
   },
 });
 ```
 
-### Request permissions
+### Send a call invitation
+
+The `SingleCall` component provides the one-to-one call page that supports the following functions:
+
+- Answers a call
+- Rejects a call
+- Hangs up a call
+- Enables/disables the camera
+- Enables/disables the microphone
+
+For the caller's client, only the components on the one-to-one call page need to be displayed to start a call:
+
+- `callType`: The call type, i.e., audio call or video call.
+- `inviterId`: The user ID of the caller. If the current user makes a call, `inviterId` is the user ID of the current user.
+- `inviteeId`: The user ID of the callee.
 
 ```typescript
-import {request} from 'react-native-permissions';
-
-export async function requestAV(): Promise<boolean> {
-  try {
-    if (Platform.OS === 'ios') {
-      const mic = await request('ios.permission.MICROPHONE');
-      const cam = await request('ios.permission.CAMERA');
-      const blu = await request('ios.permission.BLUETOOTH_PERIPHERAL');
-      if (mic === 'granted' && cam === 'granted') {
-        return true;
-      }
-      dlog.log('requestAV:', mic, cam, blu);
-    } else if (Platform.OS === 'android') {
-      const mic = await request('android.permission.CAMERA');
-      const cam = await request('android.permission.RECORD_AUDIO');
-      const blu = await request('android.permission.BLUETOOTH_CONNECT');
-      if (mic === 'granted' && cam === 'granted') {
-        return true;
-      }
-      dlog.log('requestAV:', mic, cam, blu);
-    }
-    return false;
-  } catch (error) {
-    dlog.log('requestAV:', error);
-    return false;
-  }
-}
+<SingleCall
+  inviterId={inviterId.current}
+  currentId={currentId.current}
+  currentName={currentId.current}
+  callType={callType}
+  isInviter={isInviter.current}
+  onClose={(elapsed: number, reason?: CallEndReason | undefined): void => {
+    dlog.log('CallScreen:SingleCall:', elapsed, reason);
+    navigation.goBack();
+  }}
+  onError={(error: CallError) => {
+    dlog.log('CallScreen:SingleCall:', error);
+    navigation.goBack();
+  }}
+  inviteeId={inviteeId.current}
+/>
 ```
 
-### Get token and users map
+<img src="https://web-cdn.agora.io/docs-files/1655259327417" style="zoom:50%;" />
+
+For a group call, the page component `MultiCall` is used.
+
+The property `inviteeIds` indicates the user IDs of the invitees.
 
 ```typescript
-export class AppServerClient {
-  private static _rtcTokenUrl: string =
-    'https://a1.easemob.com/token/rtcToken/v1';
-  private static _mapUrl: string = 'https://a1.easemob.com/channel/mapper';
-  private static _regUrl: string =
-    'https://a41.easemob.com/app/chat/user/register';
-  private static _tokenUrl: string =
-    'https://a41.easemob.com/app/chat/user/login';
+<MultiCall
+  inviterId={inviterId.current}
+  currentId={currentId.current}
+  currentName={currentId.current}
+  callType={callType}
+  isInviter={isInviter.current}
+  onClose={(elapsed: number, reason?: CallEndReason | undefined): void => {
+    // todo: Close the group call page.
+  }}
+  onError={(error: CallError) => {
+    // todo: Handle the error message and close the page..
+  }}
+  inviteeIds={inviteeIds.current}
+/>
+```
 
-  protected _(): void {}
-  private static async req(params: {
-    method: 'GET' | 'POST';
-    url: string;
-    kvs: any;
-    from: 'requestToken' | 'requestUserMap';
-    onResult: (p: {data?: any; error?: any}) => void;
-  }): Promise<void> {
-    dlog.log('AppServerClient:req:', params);
-    try {
-      const accessToken = await ChatClient.getInstance().getAccessToken();
-      dlog.log('AppServerClient:req:', accessToken);
-      const json = params.kvs as {
-        userAccount: string;
-        channelName: string;
-        appkey: string;
-        userChannelId?: number;
-      };
-      const url = `${params.url}?appkey=${encodeURIComponent(
-        json.appkey,
-      )}&channelName=${encodeURIComponent(
-        json.channelName,
-      )}&userAccount=${encodeURIComponent(json.userAccount)}`;
-      dlog.log('AppServerClient:req:', url);
-      const response = await fetch(url, {
-        method: params.method,
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-      const value = await response.json();
-      dlog.log('AppServerClient:req:', value, value.code);
-      if (value.code === 'RES_0K' || value.code === 'RES_OK') {
-        if (params.from === 'requestToken') {
-          params.onResult({
-            data: {
-              token: value.accessToken,
-              uid: value.agoraUserId ?? json.userChannelId,
-            },
-          });
-        } else if (params.from === 'requestUserMap') {
-          params.onResult({
-            data: {
-              result: value.result,
-            },
-          });
-        }
-      } else {
-        params.onResult({error: {code: value.code}});
-      }
-    } catch (error) {
-      params.onResult({error});
-    }
-  }
-  public static getRtcToken(params: {
-    userAccount: string;
+### Receive the invitation
+
+To receive call invitations, you need to configure a call listener.
+
+Once a call invitation is sent, the callee receives the invitation in the `onCallReceived` event.
+
+```typescript
+const {call} = useCallkitSdkContext();
+const listener = {
+  onCallReceived: (params: {
     channelId: string;
-    appKey: string;
-    userChannelId?: number | undefined;
-    type?: 'easemob' | 'agora' | undefined;
-    onResult: (params: {data?: any; error?: any}) => void;
-  }): void {
-    const tokenUrl = (url: string) => {
-      dlog.log('test:tokenUrl', params.type, url);
-      let ret = url;
-      if (params.type !== 'easemob') {
-        ret += `/${params.channelId}/agorauid/${params.userChannelId!}`;
-      }
-      return ret;
-    };
-
-    AppServerClient.req({
-      method: 'GET',
-      url: tokenUrl(AppServerClient._rtcTokenUrl),
-      kvs: {
-        userAccount: params.userAccount,
-        channelName: params.channelId,
-        appkey: params.appKey,
-        userChannelId: params.userChannelId,
-      },
-      from: 'requestToken',
-      onResult: params.onResult,
-    });
-  }
-  public static getRtcMap(params: {
-    userAccount: string;
-    channelId: string;
-    appKey: string;
-    onResult: (params: {data?: any; error?: any}) => void;
-  }): void {
-    AppServerClient.req({
-      method: 'GET',
-      url: AppServerClient._mapUrl,
-      kvs: {
-        userAccount: params.userAccount,
-        channelName: params.channelId,
-        appkey: params.appKey,
-      },
-      from: 'requestUserMap',
-      onResult: params.onResult,
-    });
-  }
-
-  private static async req2(params: {
-    userId: string;
-    userPassword: string;
-    from: 'registerAccount' | 'getAccountToken';
-    onResult: (params: {data?: any; error?: any}) => void;
-  }): Promise<void> {
-    try {
-      let url = '';
-      if (params.from === 'getAccountToken') {
-        url = AppServerClient._tokenUrl;
-      } else if (params.from === 'registerAccount') {
-        url = AppServerClient._regUrl;
-      }
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userAccount: params.userId,
-          userPassword: params.userPassword,
-        }),
-      });
-      const value = await response.json();
-      dlog.log('test:value:', url, value, value.code);
-      if (value.code === 'RES_0K' || value.code === 'RES_OK') {
-        if (params.from === 'getAccountToken') {
-          params.onResult({data: {token: value.accessToken}});
-        } else if (params.from === 'registerAccount') {
-          params.onResult({data: {}});
-        }
-      } else {
-        params.onResult({error: {code: value.code}});
-      }
-    } catch (error) {
-      params.onResult({error});
-    }
-  }
-
-  public static registerAccount(params: {
-    userId: string;
-    userPassword: string;
-    onResult: (params: {data?: any; error?: any}) => void;
-  }): void {
-    this.req2({...params, from: 'registerAccount'});
-  }
-
-  public static getAccountToken(params: {
-    userId: string;
-    userPassword: string;
-    onResult: (params: {data?: any; error?: any}) => void;
-  }): void {
-    this.req2({...params, from: 'getAccountToken'});
-  }
-
-  public static set rtcTokenUrl(url: string) {
-    AppServerClient._rtcTokenUrl = url;
-  }
-  public static set mapUrl(url: string) {
-    AppServerClient._mapUrl = url;
-  }
-  public static set regUrl(url: string) {
-    AppServerClient._regUrl = url;
-  }
-  public static set tokenUrl(url: string) {
-    AppServerClient._tokenUrl = url;
-  }
-}
+    inviterId: string;
+    callType: CallType;
+    extension?: any;
+  }) => {
+    // todo: Load and display the initialization page.
+    // example: gotoCall({av, sm, isInviter: false, inviterId: params.inviterId});
+  },
+  onCallOccurError: (params: {channelId: string; error: CallError}) => {
+    dlog.warn('onCallOccurError:', params);
+  },
+} as CallListener;
+call.addListener(listener);
 ```
 
-### Integrated audio and video calls
+After a call invitation is received, you need to load and display the call page, which is implemented in an asynchronous manner. Page redirection is used in the following sample code.
 
 ```typescript
-export function CallScreen({
-  route,
-  navigation,
-}: NativeStackScreenProps<typeof RootParamsList>): JSX.Element {
-  dlog.log('CallScreen:', route.params);
-  const av = (route.params as any).av as 'audio' | 'video';
-  const sm = (route.params as any).sm as 'single' | 'multi';
-  const ids = (route.params as any).ids as string[];
-  const currentId = React.useRef('');
-  const inviterId = React.useRef((route.params as any).inviterId ?? '');
-  const callType = React.useRef(av).current;
-  const isInviter = React.useRef((route.params as any).isInviter as boolean);
-  const inviteeId = React.useRef(ids[0] ?? '');
-  const inviteeIds = React.useRef(ids);
-  const [ready, setReady] = React.useState(false);
-
-  React.useEffect(() => {
-    const init = () => {
-      ChatClient.getInstance()
-        .getCurrentUsername()
-        .then(value => {
-          currentId.current = value;
-          if (isInviter.current === true) {
-            inviterId.current = currentId.current;
-          } else {
-            inviteeIds.current = [currentId.current];
-          }
-          setReady(true);
-        })
-        .catch(e => {
-          dlog.log('getCurrentUsername:error:', e);
-        });
-    };
-    init();
-  }, []);
-
-  if (ready === false) {
-    return <ActivityIndicator />;
-  }
-
-  if (sm === 'single') {
-    return (
-      <SingleCall
-        inviterId={inviterId.current}
-        currentId={currentId.current}
-        currentName={currentId.current}
-        callType={callType}
-        isInviter={isInviter.current}
-        onClose={(
-          elapsed: number,
-          reason?: CallEndReason | undefined,
-        ): void => {
-          dlog.log('CallScreen:SingleCall:', elapsed, reason);
-          navigation.goBack();
-        }}
-        onError={(error: CallError) => {
-          dlog.log('CallScreen:SingleCall:', error);
-          navigation.goBack();
-        }}
-        inviteeId={inviteeId.current}
-      />
-    );
-  } else {
-    return (
-      <MultiCall
-        inviterId={inviterId.current}
-        currentId={currentId.current}
-        currentName={currentId.current}
-        callType={callType}
-        isInviter={isInviter.current}
-        onClose={(
-          elapsed: number,
-          reason?: CallEndReason | undefined,
-        ): void => {
-          dlog.log('CallScreen:MultiCall:', elapsed, reason);
-          navigation.goBack();
-        }}
-        onError={(error: CallError) => {
-          dlog.log('CallScreen:MultiCall:', error);
-          navigation.goBack();
-        }}
-        inviteeIds={inviteeIds.current}
-      />
-    );
-  }
-}
+const gotoCall = React.useCallback(
+  async (params: {
+    av: 'audio' | 'video';
+    sm: 'single' | 'multi';
+    isInviter: boolean;
+    inviterId?: string;
+  }) => {
+    if (logged === false) {
+      dlog.log('gotoCall:', 'Please log in first.');
+    }
+    if ((await requestAV()) === false) {
+      dlog.log('gotoCall:', 'Failed to request permission.');
+      return;
+    }
+    if (ids.length > 0) {
+      const {av, sm, isInviter, inviterId} = params;
+      if (isInviter === false) {
+        // todo: jump to CallScreen page with navigation
+      } else {
+        // todo: jump to CallScreen page with navigation
+      }
+    }
+  },
+  [ids, logged, navigation],
+);
 ```
 
-Complete example [Reference](./App.tsx)
+**Only online users can make a call. If the callee is offline, he or she will handle the call invitation when getting online.**
 
-## Run and demo
+<img src="https://web-cdn.agora.io/docs-files/1655259340569" style="zoom:50%;" />
 
-Execute the React-Native run command `yarn run ios` or `yarn run android`, and start to experience it.
+### Send a call invitation during a group call
 
-## more detailed example
+You can set the `inviteeList` property to allow users in a group call to send call invitations to other users.
 
-[see](https://github.com/easemob/react-native-chat-library/tree/dev/examples/callkit-example)
+```typescript
+<MultiCall inviteeList={{InviteeList: ContactList}} />
+```
 
-## Q & A
+### Listen for callback events
+
+For a one-to-one call or group call, the user may perform the following actions:
+
+- If a user joins a call, the information of this user will display on the call page.
+- If a user leaves a call, the information of this user will be removed from the call page.
+- If a user enables the camera, the peer user in the one-to-one call or others in the group call can see the user; otherwise, the peer user or others in the call cannot see the user.
+- If a user enables the microphone, the peer user in the one-to-one call or others in the group call can hear the user; otherwise, the user is muted and the peer user or others in the call cannot hear the user.
+
+### End the call
+
+A one-to-one call ends as soon as one of the two users hangs up, while a group call ends only after the local user hangs up.
+
+If an error occurs, the page component provides a callback that shows the specific error.
+
+## Next steps
+
+This section contains extra steps you can take for the audio and video call functionalities in your project.
+
+### Call exceptions
+
+If a call exception or error occurs due to an issue in the network or software, the SDK triggers the `onCallOccurError` event, which presents the detailed information of the exception.
+
+```typescript
+const {call} = useCallkitSdkContext();
+const listener = {
+  onCallOccurError: (params: {channelId: string; error: CallError}) => {
+    // todo: Error or exception handling.
+  },
+} as CallListener;
+call.addListener(listener);
+```
+
+```typescript
+<SingleCall
+  onError={(error: CallError) => {
+    // todo: Handle the error message and close the page..
+  }}
+/>
+```
+
+```typescript
+<MultiCall
+  onError={(error: CallError) => {
+    // todo: Handle the error message and close the page..
+  }}
+/>
+```
+
+## Reference
+
+The Agora Chat CallKit SDK is designed on the basis of the Agora Chat SDK. Through the two SDKs, one-to-one real-time audio and video calls and group calls can be implemented.
+
+The SDK mainly provides the call manager, listener, and view to complete the call.
+
+<table>
+  <tr>
+    <td>Function</td>
+    <td>Description</td>
+  </tr>
+  <tr>
+    <td>CallManager</td>
+    <td style="font-size: 15px">
+      A manager that provides functions such as adding and removing listeners.
+    </td>
+  </tr>
+  <tr>
+    <td>CallListener</td>
+    <td style="font-size: 15px">
+      Listener for receiving notifications such as invitations and sending
+      errors.
+    </td>
+  </tr>
+  <tr>
+    <td>SingleCall</td>
+    <td style="font-size: 15px">
+      Provides a one-to-one call page for operations like invitation, answering, and hanging up, and a page that supports audio and video calls.
+    </td>
+  </tr>
+  <tr>
+    <td>MultiCall</td>
+    <td style="font-size: 15px">
+      Provides a group call page for operations such as invitation, answering, and hanging up. 
+    </td>
+  </tr>
+</table>
+
+### Manager
+
+The `CallManager` is mainly for call management. It provides the following methods:
+
+- `addListener`: adds a listener.
+- `removeListener`: removes the listener.
+
+### Listener
+
+The `CallListener` listener can receive call invitations. It provides the following events:
+
+- `onCallReceived`: Occurs when a call invitation is received.
+- `onCallOccurError`: Occurs when an error is reported during a call.
+
+### Call page
+
+`SingleCall` is the one-to-one audio and video page component. `MultiCall` is the group audio and video page component. Inherited from `BasicCall`, the two components have common properties and events.
+
+Common properties provided by the two components are as follows:
+
+| Property            | Type    | Description                                                                       |
+| :------------------ | :------ | :-------------------------------------------------------------------------------- |
+| `inviterId`         | String  | The user ID of the inviter.                                                       |
+| `inviterName `      | String  | The nickname of the inviter.                                                      |
+| `inviterUrl `       | String  | The avatar URL of the inviter.                                                    |
+| `currentId `        | String  | The current user ID.                                                              |
+| `currentName `      | String  | The nickname of the current user.                                                 |
+| `currentUrl `       | String  | The avatar URL of the current user.                                               |
+| `timeout `          | Number  | The timeout time. If the timeout period expires, the call hangs up automatically. |
+| `bottomButtonType ` | String  | Initial Button group style.                                                       |
+| `muteVideo `        | Boolean | Whether to disable video.                                                         |
+| `callType `         | String  | The call type, i.e., audio call or video call.                                    |
+| `callState `        | String  | The call state.                                                                   |
+| `isMinimize `       | Boolean | Whether the call page is the minimized state.                                     |
+| `isTest `           | Boolean | Whether to enable the test mode. It is disabled by default.                       |
+
+Common events provided by the two components are as follows:
+
+| Event           | Description                                                                                                                                                                                                                                                                        |
+| :-------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `onHangUp`      | Occurs when a user hangs up a call. When a user hangs up a call, the local user receives the `onHangUp` event and the `onClose` event.                                                                                                                                             |
+| `onCancel`      | Occurs when the call is cancelled. Only the caller receives the event.                                                                                                                                                                                                             |
+| `onRefuse`      | Occurs when the call is rejected by the callee when a call invitation is received. The callee(s) receive this event.                                                                                                                                                               |
+| `onClose`       | Occurs when a user hangs up a call. In one-to-one call, both users in the call receive this event. In a group call, the user that hangs up the call receives the event. This events also shows the call duration. In this event, you can close the call page to release resources. |
+| `onError`       | Occurs when a call error is reported.                                                                                                                                                                                                                                              |
+| `onInitialized` | Occurs when the page initialization is complete.                                                                                                                                                                                                                                   |
+| `onSelfJoined`  | Occurs when a user joins a call. The user that successfully joins the call receives the event.                                                                                                                                                                                     |
+
+Besides the common properties and events, `SingleCall` provides the following property and event:
+
+- `inviteeId`: The user ID of the invitee. The property value is of the string type.
+- `onPeerJoined`: Occurs when the invitee joins the call. The caller receives this event.
+
+Besides the common properties and events, `MultiCall` provides the following properties:
+
+- `inviteeIds`: The list of user IDs of the invitees when a group call is started. The property value is of the array type.
+- `inviteeList`: The list of user IDs of the invitees during an ongoing group call. The property value is of the array type.
+
+For group audio and video calls, the Agora Chat CallKit SDK supports up to 18 video channels and 128 audio channels.
+
+## Reference
+
+Agora provides an open-source [React Native sample project for Agora Chat](https://github.com/AgoraIO-Usecase/AgoraChat-Callkit-rn) on GitHub. You can download the sample to try it out or view the source code.
+
+Also, if you have any issues, see [React Native AgoraChatCallKit SDK repository](https://github.com/AgoraIO-Usecase/AgoraChat-rn/tree/dev/packages/react-native-chat-callkit)
