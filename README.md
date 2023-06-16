@@ -198,7 +198,7 @@ This section introduces the core steps for implementing audio and video calls in
 
 During the initialization, the following parameters are configured:
 
-- `appKey`：Required by the Agora Chat SDK. For details, see [Get the information of the Chat project](./enable.html#get-the-information-of-the-chat-project).
+- `appKey`：Required by the Agora Chat SDK. For details, see [Get the information of the Chat project](https://docs.agora.io/en/agora-chat/get-started/enable?platform=android#get-the-information-of-the-chat-project).
 - `agoraAppId`: Required by Agora RTC. For details, see [Get the App ID](https://docs.agora.io/en/video-calling/reference/manage-agora-account?platform=android#get-the-app-id).
 - `requestRTCToken`
 - `requestUserMap`
