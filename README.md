@@ -495,6 +495,11 @@ A one-to-one call ends as soon as one of the two users hangs up, while a group c
 
 If an error occurs, the page component provides a callback that shows the specific error.
 
+![image](./screenshot/login.jpg)
+![image](./screenshot/single_audio.jpg)
+![image](./screenshot/single_video.jpg)
+![image](./screenshot/multi_av.jpg)
+
 ## Next steps
 
 This section contains extra steps you can take for the audio and video call functionalities in your project.
